@@ -346,3 +346,130 @@ body::before {
   .footer-inner { flex-direction: column; align-items: flex-start; gap: 1rem; }
   .footer-center { gap: 1.25rem; }
 }
+
+/* ============================================
+   CARD GRID, SEARCH BAR, GENRE PILLS, MY SPACE STYLES
+   ============================================ */
+
+/* Card Grid Layout Structures */
+.card-grid-6, .card-grid-5 {
+  display: grid;
+  gap: 1.5rem;
+  width: 100%;
+}
+.card-grid-6 { grid-template-columns: repeat(6, 1fr); }
+.card-grid-5 { grid-template-columns: repeat(5, 1fr); }
+
+/* Base Grid Layout Elements Block */
+.movie-card {
+  position: relative;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+/* Search Box Container Filter Systems */
+.search-container {
+  position: relative;
+  max-width: 600px;
+  margin: 0 auto 2.5rem;
+}
+.search-input {
+  width: 100%;
+  padding: 1rem 1.25rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  color: var(--text);
+  font-size: 1rem;
+  box-shadow: var(--shadow);
+}
+.search-input:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Filter Control Layout Bars */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+/* Genre Pills Structural Styles */
+.genre-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+.genre-pill {
+  padding: 0.45rem 1.1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 50px;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all var(--transition);
+}
+.genre-pill:hover, .genre-pill.active {
+  color: #000;
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+/* Dropdown Sub-Filter Controls */
+.select-custom {
+  padding: 0.5rem 2rem 0.5rem 1rem;
+  background: var(--bg-card);
+  color: var(--text);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+
+/* Profile Sub-Header System Frameworks */
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+.profile-avatar {
+  font-size: 3.5rem;
+  background: var(--bg-card);
+  width: 80px; height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+}
+.myspace-tabs {
+  display: flex;
+  gap: 1rem;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 2rem;
+}
+.tab-btn {
+  padding: 0.75rem 1.5rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  position: relative;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.tab-btn.active { color: var(--text); }
+.tab-btn.active::after {
+  content: '';
+  position: absolute;
+  bottom: -1px; left: 0; right: 0;
+  height: 2px;
+  background: var(--accent);
+}
