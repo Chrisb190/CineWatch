@@ -123,7 +123,7 @@ const CURATED_FILMS = [
   },
   {
     id: 10681, Title: 'WALL·E', Year: '2008',
-    poster: 'images/WALL-E.webp',
+    poster: 'images/WALLE.webp',
     imdbRating: '8.4', Genre: 'Animation, Adventure, Family',
     myRating: 5,
     myReview: "Pixar's most daring film. Nearly silent for its first act, it tells a love story through gesture and beeps. A devastating critique of consumer culture wrapped in the most adorable robot ever.",
@@ -131,31 +131,32 @@ const CURATED_FILMS = [
   },
 ];
 
+
 // Controller logic engine to link data records onto raw nodes
 class HomeController {
   constructor() {
     this.curatedGrid = document.getElementById('curated-grid');
-    this.renderer = new CardRenderer();
+    this.renderer    = new CardRenderer();
   }
-
+ 
   init() {
     this._loadCurated();
   }
-
+ 
   _loadCurated() {
     if (!this.curatedGrid) return;
     this.curatedGrid.innerHTML = '';
-    
+ 
     CURATED_FILMS.forEach((m) => {
       this.renderer.render(m, this.curatedGrid);
     });
   }
 }
-
-// Automatically boot the controller context if we are on the Home page grid space
-document.addEventListener('DOMContentLoaded', () => {
+ 
+// Automatically boot the controller if we are on the Home page
+document.addEventListener('appReady', () => {
   if (document.getElementById('curated-grid')) {
     const home = new HomeController();
     home.init();
   }
-}); 
+});

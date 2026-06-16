@@ -1,96 +1,116 @@
 // ============================================================
-//  CLASS: NavController — mobile toggle navigation controller
-// ============================================================
-class NavController {
-  constructor() {
-    this.hamburger = document.querySelector('.hamburger');
-    this.navLinks  = document.getElementById('nav-links');
-    
-    if (this.hamburger) {
-      this.hamburger.addEventListener('click', () => this.toggleMenu());
-    }
-    this._setActiveLink();
-  }
-
-  toggleMenu() {
-    this.navLinks.classList.toggle('open');
-    this.hamburger.classList.toggle('active');
-  }
-
-  _setActiveLink() {
-    const path = window.location.pathname.split('/').pop() || 'home.html';
-    document.querySelectorAll('.nav-links a').forEach(a => {
-      if (a.getAttribute('href') === path) a.classList.add('active');
-    });
-  }
-}
-
-// ============================================================
-//  CLASS: ScrollAnimator — handles viewport reveal elements
-// ============================================================
-class ScrollAnimator {
-  constructor() {
-    this.elements = document.querySelectorAll('.fade-up');
-    this.options  = { threshold: 0.1, rootMargin: '0px 0px -50px 0px' };
-    this.init();
-  }
-
-  init() {
-    if (!('IntersectionObserver' in window)) {
-      // Fallback for browsers that do not support IntersectionObserver
-      this.elements.forEach(el => el.classList.add('visible'));
-      return;
-    }
-
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          entry.target.classList.add('visible');
-          observer.unobserve(entry.target); // Reveal animation occurs only once
-        }
-      });
-    }, this.options);
-
-    this.elements.forEach(el => observer.observe(el));
-  }
-}
-
-//  CLASS: CardRenderer (Initial Basic Pipeline Structure)
+//  CLASS: CardRenderer — builds movie card HTML
 // ============================================================
 class CardRenderer {
+  constructor(myspace, modal, toast) {
+    this.myspace = myspace;
+    this.modal   = modal;
+    this.toast   = toast;
+  }
+
   render(movie, container) {
-    const card = document.createElement('div');
-    card.className = 'movie-card';
-    card.dataset.id = movie.id;
-    
-    // Check if poster exists from local data property fields
-    let posterSrc;
+    const title = movie.title || movie.Title || '';
+
+    const year = movie.release_date
+      ? movie.release_date.slice(0, 4)
+      : (movie.Year || '');
+
+    let poster = null;
 
     if (movie.poster) {
-      posterSrc = movie.poster; // local curated data
-    } 
-    else if (movie.poster_path) {
-      posterSrc = `${CONFIG.IMG_URL}${movie.poster_path}`; // API data
-    } 
-    else {
-      posterSrc = fallback;
-    } 
-    // Simple early scaffolding code layout (no badges or watch buttons yet)
+      // Local curated images (images/ folder)
+      poster = movie.poster;
+    } else if (movie.poster_path) {
+      // TMDb API images — not used yet
+      poster = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
+    } else if (movie.Poster) {
+      poster = movie.Poster;
+    }
+
+    const rating = movie.vote_average
+      ? (movie.vote_average / 2).toFixed(1)
+      : (movie.imdbRating || null);
+
+    const genre = movie.genre_names?.[0]
+      || (movie.Genre ? movie.Genre.split(',')[0].trim() : '');
+
+    const card = document.createElement('article');
+    card.className = 'movie-card';
+
     card.innerHTML = `
-      <img src="${posterSrc}" alt="${movie.Title || movie.title}">
-      <div style="padding: 0.75rem; background: var(--bg-card);">
-        <h4 style="margin: 0 0 0.25rem 0; font-size: 1rem; color: var(--text); font-weight: 500;">${movie.Title || movie.title}</h4>
-        <small style="color: var(--text-muted);">${movie.Year || (movie.release_date ? movie.release_date.substring(0,4) : '')}</small>
+      ${poster
+        ? `<img src="${poster}" alt="${title}" loading="lazy">`
+        : `<div class="no-poster"><span>🎬</span><p>No image</p></div>`}
+
+      <div class="card-bottom">
+        <div class="card-title">${title}</div>
+        <div class="card-year">${year}</div>
+      </div>
+
+      <div class="card-overlay">
+        ${rating ? `<span class="card-rating">★ ${rating}</span>` : ''}
+        ${genre  ? `<span class="card-genre">${genre}</span>`     : ''}
+        <h3 class="card-overlay-title">${title}</h3>
+        <p class="card-year">${year}</p>
       </div>
     `;
-    
+
     container.appendChild(card);
     return card;
   }
 }
 
-// Global Core Infrastructure Boots
+// ============================================================
+//  CLASS: NavController
+// ============================================================
+class NavController {
+  constructor() {
+    this.hamburger = document.querySelector('.hamburger');
+    this.navLinks  = document.querySelector('.nav-links');
+    this._markActive();
+    this._setupHamburger();
+  }
+
+  _markActive() {
+    const page = location.pathname.split('/').pop() || 'home.html';
+    document.querySelectorAll('.nav-links a').forEach(a => {
+      if (a.getAttribute('href') === page) a.classList.add('active');
+    });
+  }
+
+  _setupHamburger() {
+    this.hamburger?.addEventListener('click', () => {
+      this.navLinks?.classList.toggle('open');
+    });
+  }
+}
+
+// ============================================================
+//  CLASS: ScrollAnimator
+// ============================================================
+class ScrollAnimator {
+  constructor() {
+    this.observer = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          this.observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.1 });
+    this._observe();
+  }
+
+  _observe() {
+    document.querySelectorAll('.fade-up').forEach(el => this.observer.observe(el));
+  }
+}
+
+// ============================================================
+//  SHARED INIT
+// ============================================================
 document.addEventListener('DOMContentLoaded', () => {
   new NavController();
   new ScrollAnimator();
+  document.dispatchEvent(new CustomEvent('appReady'));
 });
