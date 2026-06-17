@@ -57,18 +57,28 @@ class CardRenderer {
         <div class="card-year">${year}</div>
       </div>
 
-      <div class="card-overlay">
-        ${rating ? `<span class="card-rating">★ ${rating}</span>` : ''}
-        ${genre  ? `<span class="card-genre">${genre}</span>`     : ''}
-        <h3 class="card-overlay-title">${title}</h3>
-        <p class="card-year">${year}</p>
+          <div class="card-overlay">
+      ${rating ? `<span class="card-rating">★ ${rating}</span>` : ''}
+      ${genre  ? `<span class="card-genre">${genre}</span>`     : ''}
+      <h3 class="card-overlay-title">${title}</h3>
+      <p class="card-year">${year}</p>
+      <div class="card-actions">
+        <button class="card-btn details-btn" data-id="${movie.id}">Details</button>
       </div>
+    </div>
     `;
 
     container.appendChild(card);
+    card.querySelector('.details-btn')
+      ?.addEventListener('click', e => {
+        e.stopPropagation();
+        modal.open(movie.id);
+      });
+
     return card;
   }
 }
+    
 
 // ============================================================
 //  CLASS: NavController
@@ -133,10 +143,88 @@ async function fetchTrending(page = 1) {
   return res.json();
 }
 
+async function fetchMovieDetail(id) {
+  const url = `${CONFIG.API_URL}/movie/${id}?api_key=${CONFIG.API_KEY}&append_to_response=credits`;
+  const res  = await fetch(url);
+  if (!res.ok) throw new Error('Network error');
+  return res.json();
+}
+
+// ============================================================
+//  CLASS: MovieModal
+// ============================================================
+class MovieModal {
+  constructor() {
+    this.backdrop = document.getElementById('movie-modal');
+    this.content  = this.backdrop?.querySelector('.cw-modal-content');
+    this._setupClose();
+  }
+
+  _setupClose() {
+    this.backdrop?.addEventListener('click', e => {
+      if (e.target === this.backdrop) this.close();
+    });
+    document.addEventListener('keydown', e => {
+      if (e.key === 'Escape') this.close();
+    });
+  }
+
+  async open(movieId) {
+    if (!this.backdrop) return;
+    this.backdrop.classList.add('open');
+    this.content.innerHTML = `<div class="state-container" style="min-height:300px"><div class="spinner"></div></div>`;
+    try {
+      const m       = await fetchMovieDetail(movieId);
+      const poster  = m.poster_path ? `${CONFIG.IMG_LG}${m.poster_path}` : null;
+      const rating  = m.vote_average ? (m.vote_average / 2).toFixed(1) : '—';
+      const runtime = m.runtime ? `${Math.floor(m.runtime / 60)}h ${m.runtime % 60}m` : '';
+      const genres  = m.genres?.map(g => g.name).join(', ') || '';
+      const director = m.credits?.crew?.find(c => c.job === 'Director')?.name || '';
+      const cast     = m.credits?.cast?.slice(0, 5).map(c => c.name).join(', ') || '';
+
+      this.content.innerHTML = `
+        <button class="cw-modal-close" id="modal-close">✕</button>
+        <div class="cw-modal-body">
+          <div class="cw-modal-poster">
+            ${poster
+              ? `<img src="${poster}" alt="${m.title}">`
+              : `<div class="no-poster"><span>🎬</span></div>`}
+          </div>
+          <div class="cw-modal-info">
+            <h2 class="cw-modal-title">${m.title}</h2>
+            <div class="cw-modal-meta">
+              ${m.release_date ? `<span>${m.release_date.slice(0,4)}</span>` : ''}
+              ${runtime        ? `<span>${runtime}</span>`                   : ''}
+              ${rating         ? `<span class="cw-modal-rating">★ ${rating}</span>` : ''}
+            </div>
+            ${genres   ? `<p class="cw-modal-genres">${genres}</p>`          : ''}
+            ${m.overview ? `<p class="cw-modal-overview">${m.overview}</p>` : ''}
+            ${director ? `<p class="cw-modal-credit"><strong>Director:</strong> ${director}</p>` : ''}
+            ${cast     ? `<p class="cw-modal-credit"><strong>Cast:</strong> ${cast}</p>`         : ''}
+          </div>
+        </div>
+      `;
+      document.getElementById('modal-close')
+        ?.addEventListener('click', () => this.close());
+    } catch {
+      this.content.innerHTML = `<div class="state-container"><div class="state-icon">⚠️</div><div class="state-title">Failed to load</div></div>`;
+    }
+  }
+
+  close() {
+    this.backdrop?.classList.remove('open');
+    setTimeout(() => { if (this.content) this.content.innerHTML = ''; }, 300);
+  }
+}
+
+
 // ============================================================
 //  SHARED INIT
 // ============================================================
+let modal;
+
 document.addEventListener('DOMContentLoaded', () => {
+  modal  = new MovieModal();
   new NavController();
   new ScrollAnimator();
   document.dispatchEvent(new CustomEvent('appReady'));

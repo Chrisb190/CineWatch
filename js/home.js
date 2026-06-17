@@ -191,3 +191,8 @@ class HomeController {
     }
   }
 }
+
+document.addEventListener('appReady', () => {
+  const home = new HomeController();
+  home.init();
+});
