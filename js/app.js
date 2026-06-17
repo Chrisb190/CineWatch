@@ -63,8 +63,9 @@ class CardRenderer {
       <h3 class="card-overlay-title">${title}</h3>
       <p class="card-year">${year}</p>
       <div class="card-actions">
-        <button class="card-btn details-btn" data-id="${movie.id}">Details</button>
-      </div>
+  <button class="card-btn add-watch" data-id="${movie.id}">+ Watch</button>
+  <button class="card-btn details-btn" data-id="${movie.id}">Details</button>
+</div>
     </div>
     `;
 
@@ -74,6 +75,20 @@ class CardRenderer {
         e.stopPropagation();
         modal.open(movie.id);
       });
+
+      card.querySelector('.add-watch')
+  ?.addEventListener('click', e => {
+    e.stopPropagation();
+    const added = myspace.add(movie);
+
+    if (added) {
+      toast.success(`Added to watchlist`);
+      card.querySelector('.add-watch').textContent = '✓ Added';
+      card.querySelector('.add-watch').disabled = true;
+    } else {
+      toast.info('Already in your watchlist');
+    }
+  });
 
     return card;
   }
@@ -217,14 +232,101 @@ class MovieModal {
   }
 }
 
+// ============================================================
+//  CLASS: MyspaceManager
+// ============================================================
+class MyspaceManager {
+  constructor() {
+    this.key = 'cinewatch_myspace';
+  }
+
+  getAll() {
+    try {
+      return JSON.parse(localStorage.getItem(this.key)) || [];
+    } catch { return []; }
+  }
+
+  add(movie) {
+    const list = this.getAll();
+    if (!this.has(movie.id)) {
+      list.push({ ...movie, addedAt: Date.now(), watched: movie.watched ?? false });
+      this._save(list);
+      return true;
+    }
+    return false;
+  }
+
+  remove(id) {
+    const list = this.getAll().filter(m => m.id !== id);
+    this._save(list);
+  }
+
+  has(id) {
+    return this.getAll().some(m => m.id === id);
+  }
+
+  toggleWatched(id) {
+    const list = this.getAll().map(m =>
+      m.id === id ? { ...m, watched: !m.watched } : m
+    );
+    this._save(list);
+  }
+
+  toggleLiked(id) {
+    const list = this.getAll().map(m =>
+      m.id === id ? { ...m, liked: !m.liked } : m
+    );
+    this._save(list);
+  }
+
+  getStats() {
+    const list = this.getAll();
+    return {
+      total:   list.length,
+      watched: list.filter(m => m.watched).length,
+      toWatch: list.filter(m => !m.watched).length,
+    };
+  }
+
+  _save(list) {
+    localStorage.setItem(this.key, JSON.stringify(list));
+    document.dispatchEvent(new CustomEvent('myspaceUpdated'));
+  }
+}
+
+// ============================================================
+//  CLASS: ToastManager
+// ============================================================
+class ToastManager {
+  constructor() {
+    this.container = document.getElementById('toast-container');
+  }
+
+  show(message, type = 'info', icon = 'ℹ️') {
+    if (!this.container) return;
+    const toast = document.createElement('div');
+    toast.className = `toast ${type}`;
+    toast.innerHTML = `<span>${icon}</span> ${message}`;
+    this.container.appendChild(toast);
+    setTimeout(() => toast.remove(), 3000);
+  }
+
+  success(msg) { this.show(msg, 'success', '✅'); }
+  info(msg)    { this.show(msg, 'info',    '🎬'); }
+  remove(msg)  { this.show(msg, 'remove',  '🗑️'); }
+}
 
 // ============================================================
 //  SHARED INIT
 // ============================================================
 let modal;
+let myspace;
+let toast;
 
 document.addEventListener('DOMContentLoaded', () => {
-  modal  = new MovieModal();
+  modal   = new MovieModal();
+  myspace = new MyspaceManager();
+  toast   = new ToastManager();
   new NavController();
   new ScrollAnimator();
   document.dispatchEvent(new CustomEvent('appReady'));
