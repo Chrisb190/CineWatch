@@ -1,3 +1,13 @@
+
+// ── Config ──────────────────────────────────────────────────
+const CONFIG = {
+  API_KEY: '',//key is kept private 
+  API_URL: 'https://api.themoviedb.org/3',
+  IMG_URL: 'https://image.tmdb.org/t/p/w500',
+  IMG_LG:  'https://image.tmdb.org/t/p/w780',
+  PER_PAGE: 20,
+};
+
 // ============================================================
 //  CLASS: CardRenderer — builds movie card HTML
 // ============================================================
@@ -104,6 +114,23 @@ class ScrollAnimator {
   _observe() {
     document.querySelectorAll('.fade-up').forEach(el => this.observer.observe(el));
   }
+}
+
+// ============================================================
+//  TMDb API HELPERS
+// ============================================================
+async function fetchNowPlaying(page = 1) {
+  const url = `${CONFIG.API_URL}/movie/now_playing?api_key=${CONFIG.API_KEY}&page=${page}`;
+  const res  = await fetch(url);
+  if (!res.ok) throw new Error('Network error');
+  return res.json();
+}
+
+async function fetchTrending(page = 1) {
+  const url = `${CONFIG.API_URL}/trending/movie/week?api_key=${CONFIG.API_KEY}&page=${page}`;
+  const res  = await fetch(url);
+  if (!res.ok) throw new Error('Network error');
+  return res.json();
 }
 
 // ============================================================

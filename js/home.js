@@ -135,28 +135,59 @@ const CURATED_FILMS = [
 // Controller logic engine to link data records onto raw nodes
 class HomeController {
   constructor() {
-    this.curatedGrid = document.getElementById('curated-grid');
-    this.renderer    = new CardRenderer();
+    this.featuredGrid = document.getElementById('featured-grid');
+    this.curatedGrid  = document.getElementById('curated-grid');
+    this.trendingGrid = document.getElementById('trending-grid');
+    this.renderer     = new CardRenderer();
   }
- 
-  init() {
+
+  async init() {
     this._loadCurated();
+    await Promise.all([
+      this._loadNowPlaying(),
+      this._loadTrending(),
+    ]);
   }
- 
+
+  async _loadNowPlaying() {
+    if (!this.featuredGrid) return;
+    this.featuredGrid.innerHTML = `<div class="state-container" style="grid-column:1/-1;min-height:200px"><div class="spinner"></div></div>`;
+    try {
+      const data = await fetchNowPlaying(1);
+      this.featuredGrid.innerHTML = '';
+      data.results.slice(0, 8).forEach((m, i) => {
+        const card = this.renderer.render(m, this.featuredGrid);
+        card.classList.add('fade-up');
+        setTimeout(() => card.classList.add('visible'), i * 50);
+      });
+    } catch (err) {
+      this.featuredGrid.innerHTML = `<div class="state-container" style="grid-column:1/-1"><div class="state-icon">⚠️</div><div class="state-title">Could not load movies</div></div>`;
+    }
+  }
+
   _loadCurated() {
     if (!this.curatedGrid) return;
     this.curatedGrid.innerHTML = '';
- 
-    CURATED_FILMS.forEach((m) => {
-      this.renderer.render(m, this.curatedGrid);
+    CURATED_FILMS.forEach((m, i) => {
+      const card = this.renderer.render(m, this.curatedGrid);
+      card.classList.add('fade-up');
+      setTimeout(() => card.classList.add('visible'), i * 40);
     });
   }
-}
- 
-// Automatically boot the controller if we are on the Home page
-document.addEventListener('appReady', () => {
-  if (document.getElementById('curated-grid')) {
-    const home = new HomeController();
-    home.init();
+
+  async _loadTrending() {
+    if (!this.trendingGrid) return;
+    this.trendingGrid.innerHTML = `<div class="state-container" style="grid-column:1/-1;min-height:200px"><div class="spinner"></div></div>`;
+    try {
+      const data = await fetchTrending(1);
+      this.trendingGrid.innerHTML = '';
+      data.results.slice(0, 6).forEach((m, i) => {
+        const card = this.renderer.render(m, this.trendingGrid);
+        card.classList.add('fade-up');
+        setTimeout(() => card.classList.add('visible'), i * 60);
+      });
+    } catch {
+      this.trendingGrid.innerHTML = `<div class="state-container" style="grid-column:1/-1"><div class="state-icon">⚠️</div><div class="state-title">Could not load trending</div></div>`;
+    }
   }
-});
+}
