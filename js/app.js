@@ -62,7 +62,7 @@ class CardRenderer {
       ${genre  ? `<span class="card-genre">${genre}</span>`     : ''}
       <h3 class="card-overlay-title">${title}</h3>
       <p class="card-year">${year}</p>
-      <div class="card-actions">
+      <div class="card-actions" style="position:relative">
   <button class="card-btn add-watch" data-id="${movie.id}">+ Watch</button>
   <button class="card-btn details-btn" data-id="${movie.id}">Details</button>
 </div>
@@ -79,15 +79,46 @@ class CardRenderer {
       card.querySelector('.add-watch')
   ?.addEventListener('click', e => {
     e.stopPropagation();
-    const added = myspace.add(movie);
 
-    if (added) {
-      toast.success(`Added to watchlist`);
-      card.querySelector('.add-watch').textContent = '✓ Added';
-      card.querySelector('.add-watch').disabled = true;
-    } else {
-      toast.info('Already in your watchlist');
+    if (myspace.has(movie.id)) {
+      toast.info('Already in your list');
+      return;
     }
+
+    const btn = card.querySelector('.add-watch');
+    const existing = document.querySelector('.watch-dropdown');
+    if (existing) existing.remove();
+
+    const dropdown = document.createElement('div');
+    dropdown.className = 'watch-dropdown';
+    dropdown.innerHTML = `
+      <button class="dropdown-opt" data-watched="false">+ Watchlist</button>
+      <button class="dropdown-opt" data-watched="true">✓ Mark as Watched</button>
+    `;
+
+    dropdown.style.cssText = `
+  position:absolute;
+  bottom:calc(100% + 6px);
+  left:0;
+  z-index:9999;
+`;
+btn.closest('.card-actions').appendChild(dropdown);
+
+    dropdown.querySelectorAll('.dropdown-opt').forEach(opt => {
+      opt.addEventListener('click', ev => {
+        ev.stopPropagation();
+        const watched = opt.dataset.watched === 'true';
+        myspace.add({ ...movie, watched });
+        toast.success(watched ? 'Added to Watched' : 'Added to Watchlist');
+        btn.textContent = '✓ Added';
+        btn.disabled = true;
+        dropdown.remove();
+      });
+    });
+
+    setTimeout(() => {
+      document.addEventListener('click', () => dropdown.remove(), { once: true });
+    }, 0);
   });
 
     return card;
