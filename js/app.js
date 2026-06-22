@@ -46,6 +46,7 @@ class CardRenderer {
 
     const card = document.createElement('article');
     card.className = 'movie-card';
+    const alreadyAdded = myspace?.has(movie.id);
 
     card.innerHTML = `
       ${poster
@@ -58,14 +59,15 @@ class CardRenderer {
       </div>
 
           <div class="card-overlay">
-      ${rating ? `<span class="card-rating">★ ${rating}</span>` : ''}
+      ${rating ? `<div class="card-score">★ ${rating}</div>` : ''}
       ${genre  ? `<span class="card-genre">${genre}</span>`     : ''}
       <h3 class="card-overlay-title">${title}</h3>
       <p class="card-year">${year}</p>
       <div class="card-actions" style="position:relative">
-  <button class="card-btn add-watch" data-id="${movie.id}">+ Watch</button>
-  <button class="card-btn details-btn" data-id="${movie.id}">Details</button>
-</div>
+  <button class="card-btn add-watch" data-id="${movie.id}" ${alreadyAdded ? 'disabled' : ''}>
+    ${alreadyAdded ? '✓ Added' : '+ Watch'}
+  </button>  <button class="card-btn details-btn" data-id="${movie.id}">Details</button>
+  </div>
     </div>
     `;
 
@@ -120,6 +122,13 @@ btn.closest('.card-actions').appendChild(dropdown);
       document.addEventListener('click', () => dropdown.remove(), { once: true });
     }, 0);
   });
+  document.addEventListener('myspaceUpdated', () => {
+  const btn = card.querySelector('.add-watch');
+  if (!btn) return;
+  const inList = myspace?.has(movie.id);
+  btn.textContent = inList ? '✓ Added' : '+ Watch';
+  btn.disabled    = inList;
+});
 
     return card;
   }
@@ -200,66 +209,138 @@ async function fetchMovieDetail(id) {
 //  CLASS: MovieModal
 // ============================================================
 class MovieModal {
-  constructor() {
-    this.backdrop = document.getElementById('movie-modal');
-    this.content  = this.backdrop?.querySelector('.cw-modal-content');
-    this._setupClose();
-  }
-
-  _setupClose() {
-    this.backdrop?.addEventListener('click', e => {
-      if (e.target === this.backdrop) this.close();
-    });
-    document.addEventListener('keydown', e => {
-      if (e.key === 'Escape') this.close();
-    });
+  constructor(myspace, toast) {
+    this.myspace = myspace;
+    this.toast     = toast;
+    this.backdrop  = document.getElementById('movie-modal');
+    if (!this.backdrop) return;
+    this.backdrop.querySelector('.cw-modal-close')?.addEventListener('click', () => this.close());
+    this.backdrop.addEventListener('click', e => { if (e.target === this.backdrop) this.close(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape') this.close(); });
   }
 
   async open(movieId) {
     if (!this.backdrop) return;
     this.backdrop.classList.add('open');
-    this.content.innerHTML = `<div class="state-container" style="min-height:300px"><div class="spinner"></div></div>`;
-    try {
-      const m       = await fetchMovieDetail(movieId);
-      const poster  = m.poster_path ? `${CONFIG.IMG_LG}${m.poster_path}` : null;
-      const rating  = m.vote_average ? (m.vote_average / 2).toFixed(1) : '—';
-      const runtime = m.runtime ? `${Math.floor(m.runtime / 60)}h ${m.runtime % 60}m` : '';
-      const genres  = m.genres?.map(g => g.name).join(', ') || '';
-      const director = m.credits?.crew?.find(c => c.job === 'Director')?.name || '';
-      const cast     = m.credits?.cast?.slice(0, 5).map(c => c.name).join(', ') || '';
+    document.body.style.overflow = 'hidden';
+    this._renderLoading();
 
-      this.content.innerHTML = `
-        <button class="cw-modal-close" id="modal-close">✕</button>
-        <div class="cw-modal-body">
-          <div class="cw-modal-poster">
-            ${poster
-              ? `<img src="${poster}" alt="${m.title}">`
-              : `<div class="no-poster"><span>🎬</span></div>`}
-          </div>
-          <div class="cw-modal-info">
-            <h2 class="cw-modal-title">${m.title}</h2>
-            <div class="cw-modal-meta">
-              ${m.release_date ? `<span>${m.release_date.slice(0,4)}</span>` : ''}
-              ${runtime        ? `<span>${runtime}</span>`                   : ''}
-              ${rating         ? `<span class="cw-modal-rating">★ ${rating}</span>` : ''}
-            </div>
-            ${genres   ? `<p class="cw-modal-genres">${genres}</p>`          : ''}
-            ${m.overview ? `<p class="cw-modal-overview">${m.overview}</p>` : ''}
-            ${director ? `<p class="cw-modal-credit"><strong>Director:</strong> ${director}</p>` : ''}
-            ${cast     ? `<p class="cw-modal-credit"><strong>Cast:</strong> ${cast}</p>`         : ''}
-          </div>
-        </div>
-      `;
-      document.getElementById('modal-close')
-        ?.addEventListener('click', () => this.close());
+    try {
+      const m = await fetchMovieDetail(movieId);
+      this._render(m);
     } catch {
-      this.content.innerHTML = `<div class="state-container"><div class="state-icon">⚠️</div><div class="state-title">Failed to load</div></div>`;
+      this._renderError();
     }
   }
 
   close() {
-    this.backdrop?.classList.remove('open');
-    setTimeout(() => { if (this.content) this.content.innerHTML = ''; }, 300);
+    if (!this.backdrop) return;
+    this.backdrop.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  _render(m) {
+    const inMyspace = this.myspace.has(m.id);
+    const poster      = m.poster_path ? `${CONFIG.IMG_LG}${m.poster_path}` : null;
+    const rating      = m.vote_average ? (m.vote_average / 2).toFixed(1) : null;
+    const year        = m.release_date ? m.release_date.slice(0, 4) : '';
+    const genres      = m.genres ? m.genres.map(g => g.name).join(', ') : '';
+    const runtime     = m.runtime ? `${m.runtime} min` : '';
+    const director    = m.credits?.crew?.find(p => p.job === 'Director')?.name || '';
+    const cast        = m.credits?.cast?.slice(0, 4).map(p => p.name).join(', ') || '';
+
+    // Build minimal movie object to store in myspace
+    const movieSnap = {
+      id:          m.id,
+      Title:       m.title,
+      Year:        year,
+      Poster:      m.poster_path ? `${CONFIG.IMG_URL}${m.poster_path}` : null,
+      imdbRating:  rating,
+      Genre:       genres,
+    };
+
+    this.backdrop.querySelector('.cw-modal-content').innerHTML = `
+      <button class="cw-modal-close">✕</button>
+      <div class="cw-modal-poster-row">
+        <div class="cw-modal-poster">
+          ${poster
+            ? `<img src="${poster}" alt="${m.title}" loading="lazy">`
+            : `<div style="height:100%;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:2rem">🎬</div>`}
+        </div>
+        <div class="cw-modal-info">
+          <div class="cw-modal-title">${m.title}</div>
+          ${m.tagline ? `<div class="cw-modal-tagline">${m.tagline}</div>` : ''}
+          <div class="cw-modal-badges">
+            ${year    ? `<span class="badge">${year}</span>`           : ''}
+            ${runtime ? `<span class="badge">${runtime}</span>`        : ''}
+            ${rating  ? `<span class="badge gold">★ ${rating}</span>`  : ''}
+            ${m.adult === false ? `<span class="badge">PG</span>`      : ''}
+          </div>
+          <p class="cw-modal-plot">${m.overview || 'No synopsis available.'}</p>
+          <div class="cw-modal-actions">
+            <button class="btn ${inMyspace ? 'btn-ghost remove-modal-btn' : 'btn-primary add-modal-btn'}"
+              data-movie='${JSON.stringify(movieSnap)}'>
+              ${inMyspace ? '🗑 Remove from Watchlist' : '＋ Add to Watchlist'}
+            </button>
+          </div>
+        </div>
+      </div>
+      <div class="cw-modal-body">
+        <div class="cw-modal-detail-grid">
+          ${director ? `<div class="detail-item"><label>Director</label><span>${director}</span></div>`     : ''}
+          ${cast     ? `<div class="detail-item"><label>Cast</label><span>${cast}</span></div>`             : ''}
+          ${genres   ? `<div class="detail-item"><label>Genre</label><span>${genres}</span></div>`          : ''}
+          ${m.original_language ? `<div class="detail-item"><label>Language</label><span>${m.original_language.toUpperCase()}</span></div>` : ''}
+          ${m.production_countries?.[0] ? `<div class="detail-item"><label>Country</label><span>${m.production_countries[0].name}</span></div>` : ''}
+          ${m.budget  ? `<div class="detail-item"><label>Budget</label><span>$${(m.budget/1e6).toFixed(0)}M</span></div>`   : ''}
+          ${m.revenue ? `<div class="detail-item"><label>Revenue</label><span>$${(m.revenue/1e6).toFixed(0)}M</span></div>` : ''}
+          ${m.vote_count ? `<div class="detail-item"><label>Votes</label><span>${m.vote_count.toLocaleString()}</span></div>` : ''}
+        </div>
+      </div>`;
+
+    this.backdrop.querySelector('.cw-modal-close')?.addEventListener('click', () => this.close());
+
+    const addBtn = this.backdrop.querySelector('.add-modal-btn');
+    const remBtn = this.backdrop.querySelector('.remove-modal-btn');
+    if (addBtn) {
+      addBtn.addEventListener('click', () => {
+        const data = JSON.parse(addBtn.dataset.movie);
+        if (this.myspace.add(data)) {
+          this.toast.success(`"${m.title}" added to myspace`);
+          document.dispatchEvent(new CustomEvent('myspaceUpdated'));
+          this.close();
+        }
+      });
+    }
+    if (remBtn) {
+      remBtn.addEventListener('click', () => {
+        this.myspace.remove(m.id);
+        document.dispatchEvent(new CustomEvent('myspaceUpdated'));
+        this.toast.remove(`"${m.title}" removed from myspace`);
+        this.close();
+      });
+    }
+  }
+
+  _renderLoading() {
+    this.backdrop.querySelector('.cw-modal-content').innerHTML = `
+      <button class="cw-modal-close">✕</button>
+      <div class="state-container" style="min-height:300px">
+        <div class="spinner"></div>
+        <p class="state-sub">Loading movie details…</p>
+      </div>`;
+    this.backdrop.querySelector('.cw-modal-close')?.addEventListener('click', () => this.close());
+  }
+
+  _renderError() {
+    this.backdrop.querySelector('.cw-modal-content').innerHTML = `
+      <button class="cw-modal-close">✕</button>
+      <div class="state-container" style="min-height:300px">
+        <div class="state-icon">⚠️</div>
+        <div class="state-title">Couldn't Load</div>
+        <p class="state-sub">Failed to fetch movie details. Please try again.</p>
+      </div>`;
+    this.backdrop.querySelector('.cw-modal-close')?.addEventListener('click', () => this.close());
   }
 }
 
@@ -355,9 +436,9 @@ let myspace;
 let toast;
 
 document.addEventListener('DOMContentLoaded', () => {
-  modal   = new MovieModal();
   myspace = new MyspaceManager();
   toast   = new ToastManager();
+  modal   = new MovieModal(myspace, toast);
   new NavController();
   new ScrollAnimator();
   document.dispatchEvent(new CustomEvent('appReady'));
