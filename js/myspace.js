@@ -1,23 +1,66 @@
 // CLASS: ReviewManager ,handles storing and retrieving user ratings for movies using localStorage
 class ReviewManager {
-  constructor() {
-    this.key = 'cinewatch_reviews';
-  }
+  constructor() { this.key = 'cinewatch_ratings'; }
 
   getAll() {
-    try {
-      return JSON.parse(localStorage.getItem(this.key)) || {};
-    } catch { return {}; }
+    try { return JSON.parse(localStorage.getItem(this.key)) || {}; }
+    catch { return {}; }
+  }
+
+  // Store both rating (number) and text (string) together
+  set(movieId, rating, text = '') {
+    const all = this.getAll();
+    const existing = all[movieId] || {};
+    all[movieId] = {
+      rating,
+      text: text.trim(),
+      updatedAt: Date.now(),
+      movie: (typeof existing === 'number' ? null : existing.movie) || null,
+    };
+    localStorage.setItem(this.key, JSON.stringify(all));
+  }
+
+  // Store a movie snapshot so the reviews section can render it
+  setMovie(movieId, movieSnap) {
+    const all = this.getAll();
+    if (all[movieId]) {
+      const existing = typeof all[movieId] === 'number'
+        ? { rating: all[movieId], text: '', updatedAt: Date.now() }
+        : all[movieId];
+      existing.movie = movieSnap;
+      all[movieId] = existing;
+      localStorage.setItem(this.key, JSON.stringify(all));
+    }
   }
 
   get(movieId) {
-    return this.getAll()[movieId] ?? null;
+    const entry = this.getAll()[movieId];
+    if (!entry) return 0;
+    return typeof entry === 'number' ? entry : (entry.rating || 0);
   }
 
-  set(movieId, rating) {
+  getText(movieId) {
+    const entry = this.getAll()[movieId];
+    if (!entry || typeof entry === 'number') return '';
+    return entry.text || '';
+  }
+
+  getEntry(movieId) {
+    const entry = this.getAll()[movieId];
+    if (!entry) return null;
+    if (typeof entry === 'number') return { rating: entry, text: '', movie: null };
+    return entry;
+  }
+
+  // Returns all entries that have a written review
+  getAllWithText() {
     const all = this.getAll();
-    all[movieId] = rating;
-    localStorage.setItem(this.key, JSON.stringify(all));
+    return Object.entries(all)
+      .map(([id, entry]) => ({
+        id: Number(id),
+        ...(typeof entry === 'number' ? { rating: entry, text: '', movie: null } : entry),
+      }))
+      .filter(e => e.text && e.text.trim().length > 0);
   }
 
   remove(movieId) {
@@ -28,19 +71,14 @@ class ReviewManager {
 }
 
 // ============================================================
-//  CLASS: RatingModal — star picker modal
+//  CLASS: RatingModal — star rating popup
 // ============================================================
 class RatingModal {
-  constructor(reviewManager, onSave) {
-    this.reviews   = reviewManager;
-    this.onSave    = onSave;
-    this.backdrop  = document.getElementById('rate-modal');
-    this.content   = document.getElementById('rate-modal-content');
-    this.currentId = null;
-    this._setupClose();
-  }
-
-  _setupClose() {
+  constructor(reviews, onRate) {
+    this.reviews  = reviews;
+    this.onRate   = onRate;
+    this.backdrop = document.getElementById('rate-modal');
+    this.content  = document.getElementById('rate-modal-content');
     this.backdrop?.addEventListener('click', e => {
       if (e.target === this.backdrop) this.close();
     });
@@ -48,117 +86,360 @@ class RatingModal {
 
   open(movie) {
     if (!this.backdrop) return;
-    this.currentId = movie.id;
-    const current  = this.reviews.get(movie.id) ?? 0;
-    const title    = movie.Title || movie.title || '';
+    const current     = this.reviews.get(movie.id);
+    const currentText = this.reviews.getText(movie.id);
+    const _title  = movie.Title || movie.title || '';
+    const _posterSrc = movie.Poster || movie.poster
+      || (movie.poster_path ? `${CONFIG.IMG_URL}${movie.poster_path}` : null);
+    const poster = _posterSrc
+      ? `<img src="${_posterSrc}" alt="${_title}" style="width:60px;border-radius:6px;flex-shrink:0">`
+      : '<div style="width:60px;height:90px;background:var(--bg-raised);border-radius:6px;display:flex;align-items:center;justify-content:center">🎬</div>';
 
     this.content.innerHTML = `
-      <div style="padding:1.5rem">
-        <h3 style="font-family:var(--font-display);font-size:1.4rem;letter-spacing:0.05em;margin-bottom:0.25rem">
-          Rate Film
-        </h3>
-        <p style="color:var(--text-muted);font-size:0.85rem;margin-bottom:1.25rem">${title}</p>
+      <button class="cw-modal-close" id="rate-close">✕</button>
+      <div style="padding:1.75rem">
+        <div style="display:flex;gap:1rem;align-items:flex-start;margin-bottom:1.5rem">
+          ${poster}
+          <div>
+            <div style="font-family:var(--font-display);font-size:1.2rem;letter-spacing:0.04em">${_title}</div>
+            <div style="font-size:0.78rem;color:var(--text-dim);margin-top:0.2rem">${movie.Year || ''}</div>
+          </div>
+        </div>
+        <p style="font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:0.75rem">Your Rating</p>
         <div class="star-picker" id="star-picker">
           ${[1,2,3,4,5].map(n => `
-            <button class="star-btn ${n <= current ? 'active' : ''}" data-val="${n}">★</button>
+            <button class="star-pick ${n <= current ? 'active' : ''}" data-val="${n}" aria-label="${n} star${n>1?'s':''}">★</button>
           `).join('')}
         </div>
-        <div style="display:flex;gap:0.75rem;margin-top:1.5rem">
-          <button class="btn btn-primary" id="save-rating" style="flex:1">Save</button>
-          <button class="btn btn-ghost" id="cancel-rating" style="flex:1">Cancel</button>
-          ${current ? `<button class="btn btn-ghost" id="remove-rating" style="color:var(--red);border-color:var(--red)">Remove</button>` : ''}
+        <p style="font-size:0.72rem;color:var(--text-dim);text-align:center;margin-top:0.5rem;margin-bottom:1.5rem" id="star-label">
+          ${current ? this._label(current) : 'Tap to rate'}
+        </p>
+        <p style="font-size:0.75rem;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-dim);margin-bottom:0.5rem">
+          Your Review <span style="color:var(--text-dim);font-size:0.65rem;text-transform:none;letter-spacing:0">(optional)</span>
+        </p>
+        <textarea id="review-text" class="review-textarea" placeholder="What did you think? Write your thoughts…" rows="4">${currentText}</textarea>
+        <div style="display:flex;gap:0.75rem;margin-top:1.25rem">
+          <button class="btn btn-primary" id="rate-save" style="flex:1">Save</button>
+          ${current ? `<button class="btn btn-ghost" id="rate-clear">Clear</button>` : ''}
         </div>
-      </div>
-    `;
+      </div>`;
 
-    this._bindStars();
+    let selected = current;
 
-    document.getElementById('save-rating')?.addEventListener('click', () => {
-      const active = this.content.querySelectorAll('.star-btn.active').length;
-      if (active > 0) {
-        this.reviews.set(this.currentId, active);
-        this.onSave();
-        this.close();
-      }
+    const label = this.content.querySelector('#star-label');
+    const stars = this.content.querySelectorAll('.star-pick');
+
+    const highlight = val => {
+      stars.forEach((s, i) => s.classList.toggle('active', i < val));
+      label.textContent = val ? this._label(val) : 'Tap to rate';
+    };
+
+    stars.forEach(s => {
+      s.addEventListener('mouseenter', () => highlight(+s.dataset.val));
+      s.addEventListener('mouseleave', () => highlight(selected));
+      s.addEventListener('click', () => { selected = +s.dataset.val; highlight(selected); });
     });
 
-    document.getElementById('cancel-rating')?.addEventListener('click', () => this.close());
+    this.content.querySelector('#rate-close')?.addEventListener('click', () => this.close());
 
-    document.getElementById('remove-rating')?.addEventListener('click', () => {
-      this.reviews.remove(this.currentId);
-      this.onSave();
+    this.content.querySelector('#rate-save')?.addEventListener('click', () => {
+      const text = this.content.querySelector('#review-text')?.value || '';
+      if (!selected) {
+        // Show inline warning if they wrote text but forgot to pick a star
+        const existing = this.content.querySelector('.rate-warning');
+        if (!existing) {
+          const warn = document.createElement('p');
+          warn.className = 'rate-warning';
+          warn.textContent = '⚠ Pick a star rating.';
+          this.content.querySelector('#star-picker').insertAdjacentElement('beforebegin', warn);
+        }
+        // Shake the star row so it's obvious
+        const picker = this.content.querySelector('#star-picker');
+        picker.classList.remove('shake');
+        void picker.offsetWidth; // reflow to re-trigger animation
+        picker.classList.add('shake');
+        return;
+      }
+      this.reviews.set(movie.id, selected, text);
+      this.reviews.setMovie(movie.id, {
+      id:     movie.id,
+      Title:  movie.Title  || movie.title  || '',
+      Year:   movie.Year   || (movie.release_date ? movie.release_date.slice(0,4) : ''),
+      Poster: movie.Poster || movie.poster
+              || (movie.poster_path ? `${CONFIG.IMG_URL}${movie.poster_path}` : null),
+    });
+      this.onRate(movie.id, selected);
+      toast.success(`Review saved for "${movie.Title}"`);
+      this.close();
+    });
+
+    this.content.querySelector('#rate-clear')?.addEventListener('click', () => {
+      this.reviews.remove(movie.id);
+      this.onRate(movie.id, 0);
       this.close();
     });
 
     this.backdrop.classList.add('open');
-  }
-
-  _bindStars() {
-    const btns = this.content.querySelectorAll('.star-btn');
-    btns.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const val = +btn.dataset.val;
-        btns.forEach(b => b.classList.toggle('active', +b.dataset.val <= val));
-      });
-    });
+    document.body.style.overflow = 'hidden';
   }
 
   close() {
     this.backdrop?.classList.remove('open');
+    document.body.style.overflow = '';
+  }
+
+  _label(n) {
+    return ['', 'Poor', 'Fair', 'Good', 'Great', 'Masterpiece'][n] || '';
   }
 }
 
 // ============================================================
 //  CLASS: MyspaceCardRenderer
+//  Letterboxd-style cards: eye / heart / ellipsis menu
 // ============================================================
 class MyspaceCardRenderer {
-  constructor(myspaceManager, reviewManager, ratingModal) {
-    this.myspace = myspaceManager;
-    this.reviews = reviewManager;
+  constructor(myspaceMgr, reviewMgr, ratingModal, toastMgr, onUpdate) {
+    this.myspace   = myspaceMgr;
+    this.reviews     = reviewMgr;
     this.ratingModal = ratingModal;
+    this.toast       = toastMgr;
+    this.onUpdate    = onUpdate;
   }
 
   render(movie, container) {
-    const title   = movie.Title || movie.title || '';
-    const year    = movie.Year  || '';
+    const card = document.createElement('div');
+    card.className = 'movie-card wl-card';
+    card.dataset.id = movie.id;
+
+    const title  = movie.Title  || movie.title  || '';
+    const year   = movie.Year   || (movie.release_date ? movie.release_date.slice(0,4) : '');
     const poster = movie.Poster || movie.poster
-     || (movie.poster_path ? `${CONFIG.IMG_URL}${movie.poster_path}` : null);    const rating  = this.reviews.get(movie.id);
-    const card = document.createElement('article');
-    card.className = 'movie-card';
+      || (movie.poster_path ? `${CONFIG.IMG_URL}${movie.poster_path}` : null);    const rating  = this.reviews.get(movie.id);
+    const watched = movie.watched;
+    const isFav   = movie.liked || false;
+
     card.innerHTML = `
       ${poster
-        ? `<img src="${poster}" alt="${title}" loading="lazy">`
+        ? `<img src="${poster}" alt="${movie.Title}" loading="lazy">`
         : `<div class="no-poster"><span>🎬</span><p>No image</p></div>`}
+
+      <!-- Always-visible title strip -->
       <div class="card-bottom">
         <div class="card-title">${title}</div>
         <div class="card-year">${year}</div>
       </div>
-      <div class="card-overlay">
-        ${rating ? `<span class="card-rating">★ ${rating}/5</span>` : ''}
-        <h3 class="card-overlay-title">${title}</h3>
-        <div class="card-actions">
-        ${!movie.watched ? `<button class="card-btn watched-btn">Watched</button>` : ''}
-        <button class="card-btn rate-btn">★ Rate</button>
-        <button class="card-btn remove-btn" style="color:var(--red);border-color:var(--red)">Remove</button>
-        </div>
-    `;
 
-    card.querySelector('.rate-btn')?.addEventListener('click', e => {
+      <!-- Watched dim overlay -->
+      <div class="wl-watched-overlay ${watched ? 'visible' : ''}">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M20 6L9 17l-5-5"/></svg>
+      </div>
+
+      <!-- User rating badge -->
+      ${rating ? `<div class="wl-rating-badge">${'★'.repeat(rating)}</div>` : ''}
+
+      <!--action bar -->
+      <div class="wl-actions">
+
+        <!-- Eye — toggle watched -->
+        <button class="wl-btn wl-eye ${watched ? 'active' : ''}" title="${watched ? 'Mark unwatched' : 'Mark watched'}" aria-label="Toggle watched">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="${watched ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/>
+            <circle cx="12" cy="12" r="3"/>
+          </svg>
+        </button>
+
+        <!-- Heart — toggle favorite -->
+        <button class="wl-btn wl-heart ${isFav ? 'active' : ''}" title="${isFav ? 'Remove from favorites' : 'Add to favorites'}" aria-label="Toggle favorite">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="${isFav ? 'currentColor' : 'none'}" stroke="currentColor" stroke-width="2">
+            <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+          </svg>
+        </button>
+
+        <!-- Ellipsis — dropdown menu -->
+        <button class="wl-btn wl-menu" title="More options" aria-label="More options">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor">
+            <circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+          </svg>
+        </button>
+
+      </div>
+
+      <!-- Dropdown menu -->
+      <div class="wl-dropdown" id="drop-${movie.id}">
+        <button class="wl-drop-item rate-btn">
+          <span>★</span> Rate this film
+          ${rating ? `<span class="wl-drop-current">${rating}★</span>` : ''}
+        </button>
+        <button class="wl-drop-item details-btn">
+          <span>ℹ</span> View details
+        </button>
+        <div class="wl-drop-divider"></div>
+        <button class="wl-drop-item remove-btn" style="color:var(--red)">
+          <span>✕</span> Remove from list
+        </button>
+      </div>`;
+
+    this._attachEvents(card, movie);
+    container.appendChild(card);
+
+    // Close dropdown when clicking outside
+    document.addEventListener('click', e => {
+      if (!card.contains(e.target)) {
+        card.querySelector('.wl-dropdown')?.classList.remove('open');
+      }
+    });
+
+    return card;
+  }
+
+  _attachEvents(card, movie) {
+    const drop    = card.querySelector('.wl-dropdown');
+    const eyeBtn  = card.querySelector('.wl-eye');
+    const heartBtn= card.querySelector('.wl-heart');
+    const menuBtn = card.querySelector('.wl-menu');
+    const rateBtn = card.querySelector('.rate-btn');
+    const detBtn  = card.querySelector('.details-btn');
+    const remBtn  = card.querySelector('.remove-btn');
+
+    // Eye — toggle watched
+    // Marking watched removes it from Myspace tab and moves it to Watched tab.
+    // Unmarking moves it back to Myspace tab.
+    eyeBtn.addEventListener('click', e => {
       e.stopPropagation();
+      myspace.toggleWatched(movie.id);
+      movie.watched = !movie.watched;
+      this.toast.info(
+        movie.watched
+          ? `"${movie.Title || movie.title || ''}" moved to Watched`
+          : `"${movie.Title || movie.title || ''}" moved back to Myspace`
+      );
+      // Re-render so the card moves to the correct tab immediately
+      this.onUpdate();
+    });
+
+    // Heart — liked toggle
+    heartBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      myspace.toggleLiked(movie.id);
+      movie.liked = !movie.liked;
+      heartBtn.classList.toggle('active', movie.liked);
+      heartBtn.querySelector('svg').setAttribute('fill', movie.liked ? 'currentColor' : 'none');
+      heartBtn.title = movie.liked ? 'Remove from likes' : 'Like this film';
+      this.toast.success(movie.liked ? `"${title}" added to likes` : `"${title}" removed from likes`);
+      this.onUpdate();
+    });
+
+    // Ellipsis — toggle dropdown
+    menuBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      // Close all other dropdowns
+      document.querySelectorAll('.wl-dropdown.open').forEach(d => {
+        if (d !== drop) d.classList.remove('open');
+      });
+      drop.classList.toggle('open');
+    });
+
+    // Rate
+    rateBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      drop.classList.remove('open');
       this.ratingModal.open(movie);
     });
 
-    card.querySelector('.remove-btn')?.addEventListener('click', e => {
+    // Details
+    detBtn.addEventListener('click', e => {
       e.stopPropagation();
-      this.myspace.remove(movie.id);
-    });
-        card.querySelector('.watched-btn')?.addEventListener('click', e => {
-    e.stopPropagation();
-    this.myspace.toggleWatched(movie.id);
+      drop.classList.remove('open');
+      modal?.open(movie.id);
     });
 
-    container.appendChild(card);
-    return card;
+    // Remove
+    remBtn.addEventListener('click', e => {
+      e.stopPropagation();
+      drop.classList.remove('open');
+      myspace.remove(movie.id);
+      this.reviews.remove(movie.id);
+      this.toast.remove(`"${title}" removed`);
+      this.onUpdate();
+    });
+  }
+}
+
+// ============================================================
+//  CLASS: ReviewSection
+//  Renders a "My Reviews" list below the card grid.
+//  Shows all films the user has written a review for.
+// ============================================================
+class ReviewSection {
+  constructor(reviews, containerEl) {
+    this.reviews   = reviews;
+    this.container = containerEl;
+  }
+
+  render() {
+    if (!this.container) return;
+    const entries = this.reviews.getAllWithText();
+
+    if (entries.length === 0) {
+      this.container.style.display = 'none';
+      return;
+    }
+
+    this.container.style.display = '';
+    const list = entries
+      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+      .map(e => this._cardHTML(e))
+      .join('');
+
+    this.container.innerHTML = `
+      <div class="section-header fade-up" style="margin-bottom:1.5rem">
+        <h2 class="section-title">My <span>Reviews</span></h2>
+        <span style="color:var(--text-muted);font-size:0.8rem">${entries.length} review${entries.length !== 1 ? 's' : ''}</span>
+      </div>
+      <div class="reviews-list">${list}</div>`;
+
+    // Animate in
+    this.container.querySelectorAll('.review-entry').forEach((el, i) => {
+      el.classList.add('fade-up');
+      setTimeout(() => el.classList.add('visible'), i * 60);
+    });
+  }
+
+  _cardHTML(e) {
+    const stars   = e.rating ? '★'.repeat(e.rating) + '☆'.repeat(5 - e.rating) : '';
+    const label   = ['', 'Poor', 'Fair', 'Good', 'Great', 'Masterpiece'][e.rating] || '';
+    const posterSrc = e.movie?.Poster || e.movie?.poster || null;
+    const poster = posterSrc
+      ? `<img src="${posterSrc}" alt="${e.movie?.Title || ''}" loading="lazy">`
+      : `<div class="review-entry-no-poster">🎬</div>`;
+    const title   = e.movie?.Title || `Film #${e.id}`;
+    const year    = e.movie?.Year  || '';
+    const date    = e.updatedAt
+      ? new Date(e.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+      : '';
+
+    return `
+      <article class="review-entry" data-id="${e.id}">
+        <div class="review-entry-poster">${poster}</div>
+        <div class="review-entry-body">
+          <div class="review-entry-header">
+            <div>
+              <div class="review-entry-title">${title}</div>
+              ${year ? `<div class="review-entry-year">${year}</div>` : ''}
+            </div>
+            <div class="review-entry-meta">
+              ${stars ? `<div class="review-entry-stars" title="${label}">${stars}</div>` : ''}
+              ${date  ? `<div class="review-entry-date">${date}</div>`  : ''}
+            </div>
+          </div>
+          <p class="review-entry-text">${this._escapeHTML(e.text)}</p>
+          <button class="review-entry-edit btn btn-ghost" data-id="${e.id}" style="font-size:0.75rem;padding:0.35rem 0.85rem;margin-top:0.75rem">Edit Review</button>
+        </div>
+      </article>`;
+  }
+
+  _escapeHTML(str) {
+    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
   }
 }
 
@@ -167,102 +448,159 @@ class MyspaceCardRenderer {
 // ============================================================
 class MyspaceController {
   constructor() {
-    this.myspace     = myspace;
-    this.reviews     = new ReviewManager();
-    this.ratingModal = new RatingModal(this.reviews, () => this.render());
-    this.renderer    = new MyspaceCardRenderer(this.myspace, this.reviews, this.ratingModal);
     this.grid        = document.getElementById('myspace-grid');
     this.statsEl     = document.getElementById('myspace-stats');
-    this.activeTab   = 'watchlist';
+    this.tabMyspace  = document.getElementById('tab-myspace');
+    this.tabWatched  = document.getElementById('tab-watched');
+    this.tabLikes    = document.getElementById('tab-likes');
+    this.activeTab   = 'myspace';
 
+    this.reviews     = new ReviewManager();
+    this.reviewSection = new ReviewSection(
+      this.reviews,
+      document.getElementById('reviews-section')
+    );
+
+    this.ratingModal = new RatingModal(this.reviews, (id, val) => {
+      const card = this.grid?.querySelector(`[data-id="${id}"]`);
+      if (card) {
+        const existing = card.querySelector('.wl-rating-badge');
+        if (existing) existing.remove();
+        if (val) {
+          const badge = document.createElement('div');
+          badge.className = 'wl-rating-badge';
+          badge.textContent = '★'.repeat(val);
+          card.appendChild(badge);
+        }
+        const rateItem = card.querySelector('.rate-btn .wl-drop-current');
+        if (rateItem) rateItem.textContent = val ? `${val}★` : '';
+      }
+      this._updateStats();
+      this.reviewSection.render();
+    });
+
+    this.wlRenderer = new MyspaceCardRenderer(
+      myspace, this.reviews,
+      this.ratingModal, toast,
+      () => { this._render(); this._updateStats(); }
+    );
+  }
+
+  init() {
     this._setupTabs();
-    document.addEventListener('myspaceUpdated', () => this.render());
+    this._render();
+    this._updateStats();
+    this.reviewSection.render();
+    this._setupReviewEditDelegate();
+
+    document.addEventListener('myspaceUpdated', () => {
+      this._render();
+      this._updateStats();
+    });
+  }
+
+  // Delegate edit-review button clicks from the reviews section
+  _setupReviewEditDelegate() {
+    const section = document.getElementById('reviews-section');
+    if (!section) return;
+    section.addEventListener('click', e => {
+      const btn = e.target.closest('.review-entry-edit');
+      if (!btn) return;
+      const id = Number(btn.dataset.id);
+      // Find the movie from myspace list or the stored snapshot
+      const fromList = myspace.getAll().find(m => m.id === id);
+      const entry    = this.reviews.getEntry(id);
+      const snap     = fromList || entry?.movie;
+      if (snap) this.ratingModal.open(snap);
+    });
   }
 
   _setupTabs() {
-    document.getElementById('tab-myspace')?.addEventListener('click', () => {
-      this.activeTab = 'watchlist';
-      this._setActiveTab('tab-myspace');
-      this.render();
-    });
-    document.getElementById('tab-watched')?.addEventListener('click', () => {
-      this.activeTab = 'watched';
-      this._setActiveTab('tab-watched');
-      this.render();
-    });
-    document.getElementById('tab-likes')?.addEventListener('click', () => {
-      this.activeTab = 'likes';
-      this._setActiveTab('tab-likes');
-      this.render();
+    const tabs = [
+      { btn: this.tabMyspace, key: 'myspace' },
+      { btn: this.tabWatched,   key: 'watched' },
+      { btn: this.tabLikes,     key: 'likes' },
+    ];
+    tabs.forEach(({ btn, key }) => {
+      btn?.addEventListener('click', () => {
+        tabs.forEach(t => t.btn?.classList.remove('active'));
+        btn.classList.add('active');
+        this.activeTab = key;
+        this._render();
+      });
     });
   }
 
-  _setActiveTab(id) {
-    document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-    document.getElementById(id)?.classList.add('active');
+  _getFiltered() {
+    const all = myspace.getAll();
+    if (this.activeTab === 'watched')   return all.filter(m => m.watched);
+    if (this.activeTab === 'likes')     return all.filter(m => m.liked);
+    return all.filter(m => !m.watched); // 'myspace' — only unwatched films
   }
 
-  render() {
-    this._renderStats();
-    this._renderGrid();
-  }
-
-  _renderStats() {
-    if (!this.statsEl) return;
-    const stats = this.myspace.getStats();
-    this.statsEl.innerHTML = `
-      <div class="stat-card">
-        <div class="stat-value">${stats.total}</div>
-        <div class="stat-label">In Watchlist</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value">${stats.watched}</div>
-        <div class="stat-label">Watched</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value">${stats.toWatch}</div>
-        <div class="stat-label">To Watch</div>
-      </div>
-    `;
-  }
-
-  _renderGrid() {
+  _render() {
     if (!this.grid) return;
-    const all = this.myspace.getAll();
+    const movies = this._getFiltered();
 
-    let films;
-    if (this.activeTab === 'watchlist') {
-      films = all.filter(m => !m.watched);
-    } else if (this.activeTab === 'watched') {
-      films = all.filter(m => m.watched);
-    } else {
-      films = all.filter(m => m.liked);
-    }
-
-    if (films.length === 0) {
-      this.grid.innerHTML = `
-        <div class="empty-myspace" style="grid-column:1/-1">
-          <div class="big-icon">🎬</div>
-          <h3>Nothing here yet</h3>
-          <p>Add movies from the Home or Browse page.</p>
-          <a href="browse.html" class="btn btn-primary">Browse Movies</a>
-        </div>`;
+    if (movies.length === 0) {
+      this.grid.innerHTML = this._emptyHTML();
       return;
     }
 
     this.grid.innerHTML = '';
-    films.forEach((m, i) => {
-      const card = this.renderer.render(m, this.grid);
+    movies.forEach((m, i) => {
+      const card = this.wlRenderer.render(m, this.grid);
       card.classList.add('fade-up');
       setTimeout(() => card.classList.add('visible'), i * 40);
     });
+  }
+
+
+  _updateStats() {
+    if (!this.statsEl) return;
+    const all     = myspace.getAll();
+    const watched = all.filter(m => m.watched).length;
+    const liked   = all.filter(m => m.liked).length;
+    const rated   = all.filter(m => this.reviews.get(m.id) > 0).length;
+
+    this.statsEl.innerHTML = `
+      <div class="stat-card">
+        <div class="stat-value">${all.length}</div>
+        <div class="stat-label">Films</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${watched}</div>
+        <div class="stat-label">Watched</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${liked}</div>
+        <div class="stat-label">Likes</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">${rated}</div>
+        <div class="stat-label">Rated</div>
+      </div>`;
+  }
+
+  _emptyHTML() {
+    const messages = {
+      myspace: { icon: '🎬', title: 'No films yet',       sub: 'Browse movies and save them to your myspace.' },
+      watched:   { icon: '👁', title: 'Nothing watched yet', sub: 'Toggle the eye icon on any film to mark it watched.' },
+      likes:     { icon: '♥', title: 'No likes yet',        sub: 'Hit the heart icon on any film to add it here.' },
+    };
+    const m = messages[this.activeTab];
+    return `
+      <div class="empty-myspace" style="grid-column:1/-1">
+        <div class="big-icon">${m.icon}</div>
+        <h3>${m.title}</h3>
+        <p>${m.sub}</p>
+        ${this.activeTab === 'myspace' ? `<a href="browse.html" class="btn btn-primary" style="margin-top:0.5rem">Browse Movies</a>` : ''}
+      </div>`;
   }
 }
 
 // ── Boot ─────────────────────────────────────────────────────
 document.addEventListener('appReady', () => {
-  if (document.getElementById('myspace-grid')) {
-    const ctrl = new MyspaceController();
-    ctrl.render();
-  }
+  const wl = new MyspaceController();
+  wl.init();
 });
