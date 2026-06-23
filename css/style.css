@@ -1123,3 +1123,46 @@ body::before {
   .footer-inner { flex-direction: column; align-items: flex-start; gap: 1rem; }
   .footer-center { gap: 1.25rem; }
 }
+
+/*Personal Thoughts */
+.my-take {
+  margin-top: 1.25rem;
+  padding: 1.25rem;
+  background: var(--accent-dim);
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+}
+.my-take-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+.my-take-label {
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  font-weight: 600;
+}
+.my-take-stars { color: var(--accent); font-size: 0.9rem; }
+.my-take-text {
+  font-size: 0.85rem;
+  line-height: 1.7;
+  color: var(--text);
+  margin-bottom: 0.75rem;
+  font-style: italic;
+}
+.my-take-tags {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+.my-take-tag {
+  font-size: 0.68rem;
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: rgba(232,184,75,0.15);
+  color: var(--accent);
+  border: 1px solid rgba(232,184,75,0.3);
+}

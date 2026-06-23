@@ -259,7 +259,25 @@ class MovieModal {
       Genre:       genres,
     };
 
-    this.backdrop.querySelector('.cw-modal-content').innerHTML = `
+    
+
+    this.backdrop.querySelector('.cw-modal-content').innerHTML = `${(() => {
+  const curated = (typeof CURATED_FILMS !== 'undefined')
+    ? CURATED_FILMS.find(f => f.id === m.id)
+    : null;
+  if (!curated) return '';
+  return `
+    <div class="my-take">
+      <div class="my-take-header">
+        <span class="my-take-label">Personal Thoughts</span>
+        <span class="my-take-stars">${'★'.repeat(curated.myRating)}${'☆'.repeat(5 - curated.myRating)}</span>
+      </div>
+      <p class="my-take-text">${curated.myReview}</p>
+      <div class="my-take-tags">
+        ${curated.tags.map(t => `<span class="my-take-tag">${t}</span>`).join('')}
+      </div>
+    </div>`;
+})()}
       <button class="cw-modal-close">✕</button>
       <div class="cw-modal-poster-row">
         <div class="cw-modal-poster">

@@ -6,7 +6,7 @@ const CURATED_FILMS = [
     poster: 'images/TheShawshankRedemption.webp',
     imdbRating: '9.3', Genre: 'Drama',
     myRating: 5,
-    myReview: 'A timeless meditation on hope and friendship. Every frame feels deliberate. Robbins and Freeman deliver careers-best performances in a story that will outlast us all.',
+    myReview: 'The story is emotional without feeling forced, and the friendship between Andy and Red is what makes it so memorable.',
     tags: ['Hope', 'Prison', 'Drama', 'Masterpiece']
   },
   {
@@ -14,7 +14,7 @@ const CURATED_FILMS = [
     poster: 'images/TheGodfather.webp',
     imdbRating: '9.2', Genre: 'Crime, Drama',
     myRating: 5,
-    myReview: "Coppola's magnum opus. The quiet scenes hit harder than the violence — a portrait of power, loyalty, and inevitable corruption that feels as urgent today as in 1972.",
+    myReview: "I was surprised by how engaging this movie was despite its age. The characters are unforgettable, and every decision Michael makes pulls you deeper into the story.",
     tags: ['Mafia', 'Family', 'Power', 'Classic']
   },
   {
@@ -22,7 +22,7 @@ const CURATED_FILMS = [
     poster: 'images/TheDarkKnight.webp',
     imdbRating: '9.0', Genre: 'Action, Crime, Drama',
     myRating: 5,
-    myReview: "Ledger's Joker is one of cinema's all-time great performances. Nolan turned a superhero film into a philosophical thriller about the nature of chaos. Still unmatched.",
+    myReview: "Heath Ledger's Joker completely steals the show. I've watched this movie several times and it still feels intense from beginning to end.",
     tags: ['Superhero', 'Thriller', 'Iconic', 'Joker']
   },
   {
@@ -42,12 +42,12 @@ const CURATED_FILMS = [
     tags: ['Crime', 'Scorsese', 'Classic', 'Gangster']
   },
   {
-    id: 424, Title: "Schindler's List", Year: '1993',
-    poster: 'images/SchindlersList.webp',
-    imdbRating: '9.0', Genre: 'Biography, Drama, History',
+    id: 244786, Title: "Whiplash", Year: '1993',
+    poster: 'images/Whiplash.webp',
+    imdbRating: '9.0', Genre: 'Biography, Drama, Music',
     myRating: 5,
-    myReview: "Spielberg's most important film. Shot in stark black and white, the girl in the red coat remains one of cinema's most devastating symbols. Essential viewing.",
-    tags: ['Holocaust', 'History', 'Emotional', 'Powerful']
+    myReview: "Very intense movie. It actually made me feel stressed watching it, but in a good way. Unforgettable ending.",
+    tags: ['Music', 'Drama', 'Performance', 'Modern']
   },
   {
     id: 680, Title: 'Pulp Fiction', Year: '1994',
@@ -58,59 +58,59 @@ const CURATED_FILMS = [
     tags: ['Crime', 'Nonlinear', '90s', 'Cult']
   },
   {
-    id: 120, Title: 'The Fellowship of the Ring', Year: '2001',
-    poster: 'images/TheFellowshipOfTheRing.webp',
-    imdbRating: '8.8', Genre: 'Adventure, Drama, Fantasy',
+    id: 49184, Title: 'West Beirut', Year: '2001',
+    poster: 'images/WestBeirut.webp',
+    imdbRating: '8.8', Genre: 'Drama',
     myRating: 4,
-    myReview: "The perfect opening act. Shore's score, Weta's practical design, and a cast that genuinely believes in Middle-earth — this set a bar that fantasy filmmaking still chases.",
-    tags: ['Fantasy', 'Adventure', 'Epic', 'Iconic']
+    myReview: "A really emotional film that shows Lebanon in a very real way. It feels personal and honest, and some scenes stayed in my head after watching it.",
+    tags: ['Drama', 'Lebanon', 'Historical', 'Emotional']
   },
   {
     id: 157336, Title: 'Interstellar', Year: '2014',
     poster: 'images/Interstellar.webp',
     imdbRating: '8.7', Genre: 'Adventure, Drama, Sci-Fi',
     myRating: 5,
-    myReview: "Nolan at his most ambitious and his most human. The docking scene, the waterworld, the bookshelf — a film that makes you feel the weight of time and love simultaneously.",
+    myReview: "This is one of those movies that gets better every time I watch it. The visuals are incredible, but the emotional moments are what stay with me the most.",
     tags: ['Sci-Fi', 'Space', 'Emotional', 'Nolan']
   },
   {
-    id: 857, Title: 'Saving Private Ryan', Year: '1998',
-    poster: 'images/SavingPrivateRyan.webp',
-    imdbRating: '8.6', Genre: 'Drama, War',
+    id: 807, Title: 'Seven', Year: '1998',
+    poster: 'images/Se7en.webp',
+    imdbRating: '8.6', Genre: 'Drama, Mystery, Thriller',
     myRating: 4,
-    myReview: "The Omaha Beach sequence alone changed how war was depicted on screen. Brutal, visceral, and achingly human — Spielberg's love letter to the Greatest Generation.",
-    tags: ['War', 'WWII', 'Emotional', 'Hanks']
+    myReview: "Dark and disturbing in a way that actually works. The atmosphere is really heavy, and the ending still sticks with me.",
+    tags: ['Mystery', 'Thriller', 'Psychological', 'Fincher']
   },
   {
-    id: 550, Title: 'Fight Club', Year: '1999',
-    poster: 'images/FightClub.webp',
-    imdbRating: '8.8', Genre: 'Drama',
+    id: 1402, Title: 'The Pursuit Of Happyness', Year: '1999',
+    poster: 'images/ThePursuitOfHappyness.webp',
+    imdbRating: '8.8', Genre: 'Biography, Drama',
     myRating: 5,
-    myReview: "Fincher's darkest provocation. A film that gets under your skin and stays there. The first rule is you don't talk about it — the second is that you absolutely should.",
-    tags: ['Cult', '90s', 'Twist', 'Identity']
+    myReview: "A heartwarming story of perseverance and hope. Will Smith delivers a career-defining performance, capturing the struggles and emotions of a man trying to provide for his son.",
+    tags: ['Drama', 'Biography', 'Heartwarming', 'Inspirational']
   },
   {
     id: 27205, Title: 'Inception', Year: '2010',
     poster: 'images/Inception.webp',
     imdbRating: '8.8', Genre: 'Action, Adventure, Sci-Fi',
     myRating: 4,
-    myReview: "The heist movie as dreamscape. Nolan constructs a puzzle that rewards repeat viewing. The spinning top ending is cinema's greatest mic drop — intentionally unanswerable.",
+    myReview: "Nolan constructs a puzzle that rewards repeat viewing. It really keeps me thinking. The idea is really creative, and I still get confused in a good way every time.",
     tags: ['Mind-Bending', 'Sci-Fi', 'Nolan', 'Thriller']
   },
   {
-    id: 129, Title: 'Spirited Away', Year: '2001',
-    poster: 'images/SpiritedAway.webp',
-    imdbRating: '8.6', Genre: 'Animation, Adventure, Family',
+    id: 2062, Title: 'Ratatouille', Year: '2007',
+    poster: 'images/Ratatouille.webp',
+    imdbRating: '8.1', Genre: 'Animation, Comedy, Family',
     myRating: 5,
-    myReview: "Miyazaki's masterwork. A child's journey through a spirit world that feels genuinely alien and deeply Japanese. The bathhouse scenes are some of the most imaginative world-building in animation.",
-    tags: ['Anime', 'Miyazaki', 'Fantasy', 'Magical']
+    myReview: "My childhood favorite movie, and it still holds up. It's fun, heartwarming, and honestly just really comforting to watch even now.",
+    tags: ['Pixar', 'Animation', 'Comedy', 'Food']
   },
   {
     id: 603, Title: 'The Matrix', Year: '1999',
     poster: 'images/TheMatrix.webp',
     imdbRating: '8.7', Genre: 'Action, Sci-Fi',
     myRating: 4,
-    myReview: "The Wachowskis invented a new cinematic grammar with bullet time. Still philosophically rich and technically stunning, even after countless imitators have diluted its impact.",
+    myReview: "Really cool concept and still feels ahead of its time. I like how it makes you question reality while still being a fun action movie.",
     tags: ['Sci-Fi', 'Action', 'Revolutionary', '90s']
   },
   {
@@ -118,7 +118,7 @@ const CURATED_FILMS = [
     poster: 'images/Gladiator.webp',
     imdbRating: '8.5', Genre: 'Action, Adventure, Drama',
     myRating: 4,
-    myReview: "Crowe's finest hour. Scott builds Ancient Rome with grandeur and grit, then populates it with a villain (Phoenix) who steals every scene he's in. Are you not entertained?",
+    myReview: "Very solid epic movie. The story is simple but really effective, and the ending is one of the most satisfying ones I've seen.",
     tags: ['Epic', 'Rome', 'Action', 'Crowe']
   },
   {
@@ -126,7 +126,7 @@ const CURATED_FILMS = [
     poster: 'images/WALLE.webp',
     imdbRating: '8.4', Genre: 'Animation, Adventure, Family',
     myRating: 5,
-    myReview: "Pixar's most daring film. Nearly silent for its first act, it tells a love story through gesture and beeps. A devastating critique of consumer culture wrapped in the most adorable robot ever.",
+    myReview: "Super emotional for an animated movie. It's quiet for a long time, but it still manages to say a lot without needing much dialogue.",
     tags: ['Pixar', 'Animation', 'Love', 'Sci-Fi']
   },
 ];
@@ -135,35 +135,39 @@ const CURATED_FILMS = [
 // Controller logic engine to link data records onto raw nodes
 class HomeController {
   constructor() {
-    this.featuredGrid = document.getElementById('featured-grid');
-    this.curatedGrid  = document.getElementById('curated-grid');
-    this.trendingGrid = document.getElementById('trending-grid');
-    this.renderer     = new CardRenderer();
-  }
+  this.featuredGrid    = document.getElementById('featured-grid');
+  this.curatedGrid     = document.getElementById('curated-grid');
+  this.trendingGrid    = document.getElementById('trending-grid');
+  this.trendingExtra   = document.getElementById('trending-grid-extra');
+  this.trendingViewAll = document.getElementById('trending-view-all');
+  this.trendingData    = [];
+  this.renderer        = new CardRenderer();
+}
 
   async init() {
-    this._loadCurated();
-    await Promise.all([
-      this._loadNowPlaying(),
-      this._loadTrending(),
-    ]);
-  }
+  await Promise.all([
+    this._loadTrending(),
+    this._loadNowPlaying(),
+    this._loadCurated(),
+  ]);
+  new ScrollAnimator()._observe();
+}
 
   async _loadNowPlaying() {
-    if (!this.featuredGrid) return;
-    this.featuredGrid.innerHTML = `<div class="state-container" style="grid-column:1/-1;min-height:200px"><div class="spinner"></div></div>`;
-    try {
-      const data = await fetchNowPlaying(1);
-      this.featuredGrid.innerHTML = '';
-      data.results.slice(0, 8).forEach((m, i) => {
-        const card = this.renderer.render(m, this.featuredGrid);
-        card.classList.add('fade-up');
-        setTimeout(() => card.classList.add('visible'), i * 50);
-      });
-    } catch (err) {
-      this.featuredGrid.innerHTML = `<div class="state-container" style="grid-column:1/-1"><div class="state-icon">⚠️</div><div class="state-title">Could not load movies</div></div>`;
-    }
+  if (!this.featuredGrid) return;
+  this.featuredGrid.innerHTML = this._loadingHTML();
+  try {
+    const data = await fetchNowPlaying(1);
+    this.featuredGrid.innerHTML = '';
+    data.results.slice(0, 8).forEach((m, i) => {
+      const card = this.renderer.render(m, this.featuredGrid);
+      card.classList.add('fade-up');
+      setTimeout(() => card.classList.add('visible'), i * 50);
+    });
+  } catch (err) {
+    this.featuredGrid.innerHTML = this._errorHTML('Could not load movies');
   }
+}
 
   _loadCurated() {
     if (!this.curatedGrid) return;
@@ -176,21 +180,58 @@ class HomeController {
   }
 
   async _loadTrending() {
-    if (!this.trendingGrid) return;
-    this.trendingGrid.innerHTML = `<div class="state-container" style="grid-column:1/-1;min-height:200px"><div class="spinner"></div></div>`;
-    try {
-      const data = await fetchTrending(1);
-      this.trendingGrid.innerHTML = '';
-      data.results.slice(0, 6).forEach((m, i) => {
-        const card = this.renderer.render(m, this.trendingGrid);
-        card.classList.add('fade-up');
-        setTimeout(() => card.classList.add('visible'), i * 60);
-      });
-    } catch {
-      this.trendingGrid.innerHTML = `<div class="state-container" style="grid-column:1/-1"><div class="state-icon">⚠️</div><div class="state-title">Could not load trending</div></div>`;
-    }
+  if (!this.trendingGrid) return;
+  this.trendingGrid.innerHTML = this._loadingHTML();
+  try {
+    const data = await fetchTrending(1);
+    this.trendingData = data.results;
+    this.trendingGrid.innerHTML = '';
+
+    // Show first 6
+    this.trendingData.slice(0, 6).forEach((m, i) => {
+      const card = this.renderer.render(m, this.trendingGrid);
+      card.classList.add('fade-up');
+      setTimeout(() => card.classList.add('visible'), i * 60);
+    });
+
+    // Wire view all button
+    this.trendingViewAll?.addEventListener('click', e => {
+      e.preventDefault();
+      const isExpanded = this.trendingExtra.style.display !== 'none';
+
+      if (isExpanded) {
+        this.trendingExtra.style.display = 'none';
+        this.trendingExtra.innerHTML = '';
+        this.trendingViewAll.textContent = 'View all →';
+      } else {
+        this.trendingExtra.style.display = 'grid';
+        this.trendingData.slice(6, 12).forEach((m, i) => {
+          const card = this.renderer.render(m, this.trendingExtra);
+          card.classList.add('fade-up');
+          setTimeout(() => card.classList.add('visible'), i * 60);
+        });
+        this.trendingViewAll.textContent = 'View less ↑';
+      }
+    });
+
+  } catch {
+    this.trendingGrid.innerHTML = this._errorHTML('Could not load trending');
   }
 }
+_loadingHTML() {
+  return `<div class="state-container" style="grid-column:1/-1;min-height:200px">
+    <div class="spinner"></div>
+    <p class="state-sub">Fetching movies…</p>
+  </div>`;
+}
+
+_errorHTML(title, detail = '') {
+  return `<div class="state-container" style="grid-column:1/-1">
+    <div class="state-icon">⚠️</div>
+    <div class="state-title">${title}</div>
+    ${detail ? `<p class="state-sub">${detail}</p>` : ''}
+  </div>`;
+}}
 
 document.addEventListener('appReady', () => {
   const home = new HomeController();
