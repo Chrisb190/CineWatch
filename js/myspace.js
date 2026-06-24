@@ -153,7 +153,7 @@ class RatingModal {
           warn.textContent = '⚠ Pick a star rating.';
           this.content.querySelector('#star-picker').insertAdjacentElement('beforebegin', warn);
         }
-        // Shake the star row so it's obvious
+        // Shake the star row to draw attention
         const picker = this.content.querySelector('#star-picker');
         picker.classList.remove('shake');
         void picker.offsetWidth; // reflow to re-trigger animation
@@ -169,6 +169,7 @@ class RatingModal {
               || (movie.poster_path ? `${CONFIG.IMG_URL}${movie.poster_path}` : null),
     });
       this.onRate(movie.id, selected);
+      document.dispatchEvent(new CustomEvent('reviewsUpdated'));
       toast.success(`Review saved for "${movie.Title}"`);
       this.close();
     });
@@ -176,6 +177,7 @@ class RatingModal {
     this.content.querySelector('#rate-clear')?.addEventListener('click', () => {
       this.reviews.remove(movie.id);
       this.onRate(movie.id, 0);
+      document.dispatchEvent(new CustomEvent('reviewsUpdated'));
       this.close();
     });
 
@@ -195,7 +197,6 @@ class RatingModal {
 
 // ============================================================
 //  CLASS: MyspaceCardRenderer
-//  Letterboxd-style cards: eye / heart / ellipsis menu
 // ============================================================
 class MyspaceCardRenderer {
   constructor(myspaceMgr, reviewMgr, ratingModal, toastMgr, onUpdate) {
@@ -302,21 +303,21 @@ class MyspaceCardRenderer {
     const remBtn  = card.querySelector('.remove-btn');
 
     // Eye — toggle watched
-    // Marking watched removes it from Myspace tab and moves it to Watched tab.
-    // Unmarking moves it back to Myspace tab.
+  
     eyeBtn.addEventListener('click', e => {
-      e.stopPropagation();
+    e.stopPropagation();
+    if (movie.watched) {
+      // In Watched tab — remove entirely
+      myspace.remove(movie.id);
+      this.toast.remove(`"${movie.Title || movie.title || ''}" removed`);
+    } else {
+      // In Watchlist tab — move to Watched
       myspace.toggleWatched(movie.id);
-      movie.watched = !movie.watched;
-      this.toast.info(
-        movie.watched
-          ? `"${movie.Title || movie.title || ''}" moved to Watched`
-          : `"${movie.Title || movie.title || ''}" moved back to Myspace`
-      );
-      // Re-render so the card moves to the correct tab immediately
-      this.onUpdate();
-    });
-
+      movie.watched = true;
+      this.toast.info(`"${movie.Title || movie.title || ''}" moved to Watched`);
+    }
+    this.onUpdate();
+  });
     // Heart — liked toggle
     heartBtn.addEventListener('click', e => {
       e.stopPropagation();
@@ -366,84 +367,6 @@ class MyspaceCardRenderer {
 }
 
 // ============================================================
-//  CLASS: ReviewSection
-//  Renders a "My Reviews" list below the card grid.
-//  Shows all films the user has written a review for.
-// ============================================================
-class ReviewSection {
-  constructor(reviews, containerEl) {
-    this.reviews   = reviews;
-    this.container = containerEl;
-  }
-
-  render() {
-    if (!this.container) return;
-    const entries = this.reviews.getAllWithText();
-
-    if (entries.length === 0) {
-      this.container.style.display = 'none';
-      return;
-    }
-
-    this.container.style.display = '';
-    const list = entries
-      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
-      .map(e => this._cardHTML(e))
-      .join('');
-
-    this.container.innerHTML = `
-      <div class="section-header fade-up" style="margin-bottom:1.5rem">
-        <h2 class="section-title">My <span>Reviews</span></h2>
-        <span style="color:var(--text-muted);font-size:0.8rem">${entries.length} review${entries.length !== 1 ? 's' : ''}</span>
-      </div>
-      <div class="reviews-list">${list}</div>`;
-
-    // Animate in
-    this.container.querySelectorAll('.review-entry').forEach((el, i) => {
-      el.classList.add('fade-up');
-      setTimeout(() => el.classList.add('visible'), i * 60);
-    });
-  }
-
-  _cardHTML(e) {
-    const stars   = e.rating ? '★'.repeat(e.rating) + '☆'.repeat(5 - e.rating) : '';
-    const label   = ['', 'Poor', 'Fair', 'Good', 'Great', 'Masterpiece'][e.rating] || '';
-    const posterSrc = e.movie?.Poster || e.movie?.poster || null;
-    const poster = posterSrc
-      ? `<img src="${posterSrc}" alt="${e.movie?.Title || ''}" loading="lazy">`
-      : `<div class="review-entry-no-poster">🎬</div>`;
-    const title   = e.movie?.Title || `Film #${e.id}`;
-    const year    = e.movie?.Year  || '';
-    const date    = e.updatedAt
-      ? new Date(e.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
-      : '';
-
-    return `
-      <article class="review-entry" data-id="${e.id}">
-        <div class="review-entry-poster">${poster}</div>
-        <div class="review-entry-body">
-          <div class="review-entry-header">
-            <div>
-              <div class="review-entry-title">${title}</div>
-              ${year ? `<div class="review-entry-year">${year}</div>` : ''}
-            </div>
-            <div class="review-entry-meta">
-              ${stars ? `<div class="review-entry-stars" title="${label}">${stars}</div>` : ''}
-              ${date  ? `<div class="review-entry-date">${date}</div>`  : ''}
-            </div>
-          </div>
-          <p class="review-entry-text">${this._escapeHTML(e.text)}</p>
-          <button class="review-entry-edit btn btn-ghost" data-id="${e.id}" style="font-size:0.75rem;padding:0.35rem 0.85rem;margin-top:0.75rem">Edit Review</button>
-        </div>
-      </article>`;
-  }
-
-  _escapeHTML(str) {
-    return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  }
-}
-
-// ============================================================
 //  CLASS: MyspaceController
 // ============================================================
 class MyspaceController {
@@ -453,13 +376,10 @@ class MyspaceController {
     this.tabMyspace  = document.getElementById('tab-myspace');
     this.tabWatched  = document.getElementById('tab-watched');
     this.tabLikes    = document.getElementById('tab-likes');
-    this.activeTab   = 'myspace';
+    this.activeTab   = 'watched';
 
     this.reviews     = new ReviewManager();
-    this.reviewSection = new ReviewSection(
-      this.reviews,
-      document.getElementById('reviews-section')
-    );
+    this.tabReviews  = document.getElementById('tab-reviews');
 
     this.ratingModal = new RatingModal(this.reviews, (id, val) => {
       const card = this.grid?.querySelector(`[data-id="${id}"]`);
@@ -476,7 +396,6 @@ class MyspaceController {
         if (rateItem) rateItem.textContent = val ? `${val}★` : '';
       }
       this._updateStats();
-      this.reviewSection.render();
     });
 
     this.wlRenderer = new MyspaceCardRenderer(
@@ -490,10 +409,12 @@ class MyspaceController {
     this._setupTabs();
     this._render();
     this._updateStats();
-    this.reviewSection.render();
-    this._setupReviewEditDelegate();
 
     document.addEventListener('myspaceUpdated', () => {
+      this._render();
+      this._updateStats();
+    });
+    document.addEventListener('reviewsUpdated', () => {
       this._render();
       this._updateStats();
     });
@@ -520,6 +441,7 @@ class MyspaceController {
       { btn: this.tabMyspace, key: 'myspace' },
       { btn: this.tabWatched,   key: 'watched' },
       { btn: this.tabLikes,     key: 'likes' },
+      { btn: this.tabReviews,   key: 'reviews' },
     ];
     tabs.forEach(({ btn, key }) => {
       btn?.addEventListener('click', () => {
@@ -540,9 +462,15 @@ class MyspaceController {
 
   _render() {
     if (!this.grid) return;
+      this.grid.className = 'card-grid';
+    if (this.activeTab === 'reviews') {
+    this._renderReviews();
+    return;
+  }
     const movies = this._getFiltered();
 
     if (movies.length === 0) {
+      this.grid.className = 'reviews-container';
       this.grid.innerHTML = this._emptyHTML();
       return;
     }
@@ -555,6 +483,78 @@ class MyspaceController {
     });
   }
 
+  _renderReviews() {
+    this.grid.className = 'reviews-container';
+  const entries = this.reviews.getAllWithText();
+
+  if (entries.length === 0) {
+    this.grid.innerHTML = `
+      <div class="empty-myspace">
+        <h3>No reviews yet</h3>
+        <p>Rate a film and write your thoughts to see them here.</p>
+      </div>`;
+    return;
+  }
+
+  const sorted = entries.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+
+  this.grid.innerHTML = `
+    <div class="reviews-list">
+      ${sorted.map(e => this._reviewCardHTML(e)).join('')}
+    </div>`;
+
+  this.grid.querySelectorAll('.review-entry').forEach((el, i) => {
+    el.classList.add('fade-up');
+    setTimeout(() => el.classList.add('visible'), i * 60);
+  });
+
+  // Wire edit buttons
+  this.grid.querySelectorAll('.review-entry-edit').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = Number(btn.dataset.id);
+      const fromList = myspace.getAll().find(m => m.id === id);
+      const entry    = this.reviews.getEntry(id);
+      const snap     = fromList || entry?.movie;
+      if (snap) this.ratingModal.open(snap);
+    });
+  });
+}
+
+_reviewCardHTML(e) {
+  const stars    = e.rating ? '★'.repeat(e.rating) + '☆'.repeat(5 - e.rating) : '';
+  const label    = ['', 'Poor', 'Fair', 'Good', 'Great', 'Masterpiece'][e.rating] || '';
+  const posterSrc = e.movie?.Poster || e.movie?.poster || null;
+  const poster   = posterSrc
+    ? `<img src="${posterSrc}" alt="${e.movie?.Title || ''}" loading="lazy">`
+    : `<div class="review-entry-no-poster">🎬</div>`;
+  const title    = e.movie?.Title || `Film #${e.id}`;
+  const year     = e.movie?.Year  || '';
+  const date     = e.updatedAt
+    ? new Date(e.updatedAt).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })
+    : '';
+
+  return `
+    <article class="review-entry" data-id="${e.id}">
+      <div class="review-entry-poster">${poster}</div>
+      <div class="review-entry-body">
+        <div class="review-entry-header">
+          <div>
+            <div class="review-entry-title">${title}</div>
+            ${year ? `<div class="review-entry-year">${year}</div>` : ''}
+          </div>
+          <div class="review-entry-meta">
+            ${stars ? `<div class="review-entry-stars" title="${label}">${stars}</div>` : ''}
+            ${date  ? `<div class="review-entry-date">${date}</div>`  : ''}
+          </div>
+        </div>
+        <p class="review-entry-text">${e.text}</p>
+        <button class="review-entry-edit btn btn-ghost" data-id="${e.id}" 
+          style="font-size:0.75rem;padding:0.35rem 0.85rem;margin-top:0.75rem">
+          Edit Review
+        </button>
+      </div>
+    </article>`;
+}
 
   _updateStats() {
     if (!this.statsEl) return;
@@ -564,34 +564,34 @@ class MyspaceController {
     const rated   = all.filter(m => this.reviews.get(m.id) > 0).length;
 
     this.statsEl.innerHTML = `
-      <div class="stat-card">
-        <div class="stat-value">${all.length}</div>
-        <div class="stat-label">Films</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value">${watched}</div>
-        <div class="stat-label">Watched</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value">${liked}</div>
-        <div class="stat-label">Likes</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-value">${rated}</div>
-        <div class="stat-label">Rated</div>
-      </div>`;
+  <div class="stat-card">
+    <div class="stat-value">${watched}</div>
+    <div class="stat-label">Watched</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">${all.filter(m => !m.watched).length}</div>
+    <div class="stat-label">Watchlist</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">${liked}</div>
+    <div class="stat-label">Likes</div>
+  </div>
+  <div class="stat-card">
+    <div class="stat-value">${this.reviews.getAllWithText().length}</div>
+    <div class="stat-label">Reviews</div>
+  </div>`;
   }
 
   _emptyHTML() {
     const messages = {
-      myspace: { icon: '🎬', title: 'No films yet',       sub: 'Browse movies and save them to your myspace.' },
-      watched:   { icon: '👁', title: 'Nothing watched yet', sub: 'Toggle the eye icon on any film to mark it watched.' },
-      likes:     { icon: '♥', title: 'No likes yet',        sub: 'Hit the heart icon on any film to add it here.' },
+      watched:   { title: 'Nothing watched yet', sub: 'Browse movies and mark them as watched.' },  
+      myspace: { title: 'No films yet',       sub: 'Browse movies and save them to your myspace.' },
+      likes:     { title: 'No likes yet',        sub: 'Hit the heart icon on any film to add it here.' },
+      reviews:   { title: 'No reviews yet',      sub: 'Rate a film and write your thoughts to see them here.' },
     };
     const m = messages[this.activeTab];
     return `
-      <div class="empty-myspace" style="grid-column:1/-1">
-        <div class="big-icon">${m.icon}</div>
+      <div class="empty-myspace">
         <h3>${m.title}</h3>
         <p>${m.sub}</p>
         ${this.activeTab === 'myspace' ? `<a href="browse.html" class="btn btn-primary" style="margin-top:0.5rem">Browse Movies</a>` : ''}

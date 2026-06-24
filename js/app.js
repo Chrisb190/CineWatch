@@ -1,7 +1,7 @@
 
 // ── Config ──────────────────────────────────────────────────
 const CONFIG = {
-  API_KEY: '',//key is kept private 
+  API_KEY: '75b6850c1ec54ca4c602aeecf24fb429',
   API_URL: 'https://api.themoviedb.org/3',
   IMG_URL: 'https://image.tmdb.org/t/p/w500',
   IMG_LG:  'https://image.tmdb.org/t/p/w780',
@@ -147,7 +147,7 @@ class NavController {
   }
 
   _markActive() {
-    const page = location.pathname.split('/').pop() || 'home.html';
+    const page = location.pathname.split('/').pop() || 'index.html';
     document.querySelectorAll('.nav-links a').forEach(a => {
       if (a.getAttribute('href') === page) a.classList.add('active');
     });
