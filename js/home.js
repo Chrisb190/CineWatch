@@ -123,7 +123,7 @@ const CURATED_FILMS = [
   },
   {
     id: 10681, Title: 'WALL·E', Year: '2008',
-    poster: 'images/Walle.webp',
+    poster: 'images/WallE.webp',
     imdbRating: '8.4', Genre: 'Animation, Adventure, Family',
     myRating: 4,
     myReview: "Super emotional for an animated movie. It's quiet for a long time, but it still manages to say a lot without needing much dialogue.",
