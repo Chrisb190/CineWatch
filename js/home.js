@@ -53,7 +53,7 @@ const CURATED_FILMS = [
     id: 680, Title: 'Pulp Fiction', Year: '1994',
     poster: 'images/PulpFiction.webp',
     imdbRating: '8.9', Genre: 'Crime, Drama',
-    myRating: 5,
+    myRating: 4,
     myReview: "Tarantino rewrote the rules of narrative cinema. Endlessly quotable, visually inventive, and somehow still fresh. The most influential film of the 90s, by a wide margin.",
     tags: ['Crime', 'Nonlinear', '90s', 'Cult']
   },
@@ -61,7 +61,7 @@ const CURATED_FILMS = [
     id: 49184, Title: 'West Beirut', Year: '2001',
     poster: 'images/WestBeirut.webp',
     imdbRating: '8.8', Genre: 'Drama',
-    myRating: 4,
+    myRating: 5,
     myReview: "A really emotional film that shows Lebanon in a very real way. It feels personal and honest, and some scenes stayed in my head after watching it.",
     tags: ['Drama', 'Lebanon', 'Historical', 'Emotional']
   },
@@ -77,7 +77,7 @@ const CURATED_FILMS = [
     id: 807, Title: 'Seven', Year: '1998',
     poster: 'images/Se7en.webp',
     imdbRating: '8.6', Genre: 'Drama, Mystery, Thriller',
-    myRating: 4,
+    myRating: 5,
     myReview: "Dark and disturbing in a way that actually works. The atmosphere is really heavy, and the ending still sticks with me.",
     tags: ['Mystery', 'Thriller', 'Psychological', 'Fincher']
   },
@@ -85,7 +85,7 @@ const CURATED_FILMS = [
     id: 1402, Title: 'The Pursuit Of Happyness', Year: '1999',
     poster: 'images/ThePursuitOfHappyness.webp',
     imdbRating: '8.8', Genre: 'Biography, Drama',
-    myRating: 5,
+    myRating: 4,
     myReview: "A heartwarming story of perseverance and hope. Will Smith delivers a career-defining performance, capturing the struggles and emotions of a man trying to provide for his son.",
     tags: ['Drama', 'Biography', 'Heartwarming', 'Inspirational']
   },
@@ -123,9 +123,9 @@ const CURATED_FILMS = [
   },
   {
     id: 10681, Title: 'WALL·E', Year: '2008',
-    poster: 'images/WALLE.webp',
+    poster: 'images/Walle.webp',
     imdbRating: '8.4', Genre: 'Animation, Adventure, Family',
-    myRating: 5,
+    myRating: 4,
     myReview: "Super emotional for an animated movie. It's quiet for a long time, but it still manages to say a lot without needing much dialogue.",
     tags: ['Pixar', 'Animation', 'Love', 'Sci-Fi']
   },
@@ -227,7 +227,6 @@ _loadingHTML() {
 
 _errorHTML(title, detail = '') {
   return `<div class="state-container" style="grid-column:1/-1">
-    <div class="state-icon">⚠️</div>
     <div class="state-title">${title}</div>
     ${detail ? `<p class="state-sub">${detail}</p>` : ''}
   </div>`;

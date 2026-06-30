@@ -5,17 +5,15 @@ const CONFIG = {
   API_URL: 'https://api.themoviedb.org/3',
   IMG_URL: 'https://image.tmdb.org/t/p/w500',
   IMG_LG:  'https://image.tmdb.org/t/p/w780',
-  PER_PAGE: 20,
 };
 
 // ============================================================
 //  CLASS: CardRenderer — builds movie card HTML
 // ============================================================
 class CardRenderer {
-  constructor(myspace, modal, toast) {
+  constructor(myspace, modal) {
     this.myspace = myspace;
     this.modal   = modal;
-    this.toast   = toast;
   }
 
   render(movie, container) {
@@ -31,7 +29,6 @@ class CardRenderer {
       // Local curated images (images/ folder)
       poster = movie.poster;
     } else if (movie.poster_path) {
-      // TMDb API images — not used yet
       poster = `https://image.tmdb.org/t/p/w500${movie.poster_path}`;
     } else if (movie.Poster) {
       poster = movie.Poster;
@@ -64,7 +61,7 @@ class CardRenderer {
       <h3 class="card-overlay-title">${title}</h3>
       <p class="card-year">${year}</p>
       <div class="card-actions" style="position:relative">
-  <button class="card-btn add-watch" data-id="${movie.id}" ${alreadyAdded ? 'disabled' : ''}>
+  <button class="card-btn add-watch" data-id="${movie.id}"}>
     ${alreadyAdded ? '✓ Added' : '+ Watch'}
   </button>  <button class="card-btn details-btn" data-id="${movie.id}">Details</button>
   </div>
@@ -82,26 +79,36 @@ class CardRenderer {
   ?.addEventListener('click', e => {
     e.stopPropagation();
 
-    if (myspace.has(movie.id)) {
-      toast.info('Already in your list');
-      return;
-    }
-
     const btn = card.querySelector('.add-watch');
     const existing = document.querySelector('.watch-dropdown');
     if (existing) existing.remove();
 
     const dropdown = document.createElement('div');
     dropdown.className = 'watch-dropdown';
+    
+    if (myspace.has(movie.id)) {
+  const entry = myspace.getAll().find(m => m.id === movie.id);
+  if (entry?.watched) {
     dropdown.innerHTML = `
-      <button class="dropdown-opt" data-watched="false">+ Watchlist</button>
-      <button class="dropdown-opt" data-watched="true">✓ Mark as Watched</button>
+      <button class="dropdown-opt" data-action="remove">Remove from Watched</button>
+      <button class="dropdown-opt" data-action="to-watchlist">Move to Watchlist</button>
     `;
+  } else {
+    dropdown.innerHTML = `
+      <button class="dropdown-opt" data-action="remove">Remove from Watchlist</button>
+      <button class="dropdown-opt" data-action="to-watched">Move to Watched</button>
+    `;
+  }
+} else {
+  dropdown.innerHTML = `
+    <button class="dropdown-opt" data-action="watchlist">Add to Watchlist</button>
+    <button class="dropdown-opt" data-action="watched">Mark as Watched</button>
+  `;
+}
 
     dropdown.style.cssText = `
   position:absolute;
   bottom:calc(100% + 6px);
-  left:0;
   z-index:9999;
 `;
 btn.closest('.card-actions').appendChild(dropdown);
@@ -109,11 +116,18 @@ btn.closest('.card-actions').appendChild(dropdown);
     dropdown.querySelectorAll('.dropdown-opt').forEach(opt => {
       opt.addEventListener('click', ev => {
         ev.stopPropagation();
-        const watched = opt.dataset.watched === 'true';
-        myspace.add({ ...movie, watched });
-        toast.success(watched ? 'Added to Watched' : 'Added to Watchlist');
-        btn.textContent = '✓ Added';
-        btn.disabled = true;
+        const action = opt.dataset.action;
+        if (action === 'remove') {
+          myspace.remove(movie.id);
+        } else if (action === 'watchlist') {
+          myspace.add({ ...movie, watched: false });
+        } else if (action === 'watched') {
+          myspace.add({ ...movie, watched: true });
+        } else if (action === 'to-watched') {
+          myspace.toggleWatched(movie.id);
+        } else if (action === 'to-watchlist') {
+          myspace.toggleWatched(movie.id);
+        }
         dropdown.remove();
       });
     });
@@ -127,7 +141,7 @@ btn.closest('.card-actions').appendChild(dropdown);
   if (!btn) return;
   const inList = myspace?.has(movie.id);
   btn.textContent = inList ? '✓ Added' : '+ Watch';
-  btn.disabled    = inList;
+  btn.disabled    = false;
 });
 
     return card;
@@ -209,9 +223,8 @@ async function fetchMovieDetail(id) {
 //  CLASS: MovieModal
 // ============================================================
 class MovieModal {
-  constructor(myspace, toast) {
+  constructor(myspace) {
     this.myspace = myspace;
-    this.toast     = toast;
     this.backdrop  = document.getElementById('movie-modal');
     if (!this.backdrop) return;
     this.backdrop.querySelector('.cw-modal-close')?.addEventListener('click', () => this.close());
@@ -219,7 +232,8 @@ class MovieModal {
     document.addEventListener('keydown', e => { if (e.key === 'Escape') this.close(); });
   }
 
-  async open(movieId) {
+  async open(movieId, hideActions = false) {
+    this.hideActions = hideActions;
     if (!this.backdrop) return;
     this.backdrop.classList.add('open');
     document.body.style.overflow = 'hidden';
@@ -295,12 +309,13 @@ class MovieModal {
             ${m.adult === false ? `<span class="badge">PG</span>`      : ''}
           </div>
           <p class="cw-modal-plot">${m.overview || 'No synopsis available.'}</p>
+          ${!this.hideActions ? `
           <div class="cw-modal-actions">
             <button class="btn ${inMyspace ? 'btn-ghost remove-modal-btn' : 'btn-primary add-modal-btn'}"
               data-movie='${JSON.stringify(movieSnap)}'>
               ${inMyspace ? '🗑 Remove from Watchlist' : '＋ Add to Watchlist'}
             </button>
-          </div>
+          </div>` : ''}
         </div>
       </div>
       <div class="cw-modal-body">
@@ -324,7 +339,6 @@ class MovieModal {
       addBtn.addEventListener('click', () => {
         const data = JSON.parse(addBtn.dataset.movie);
         if (this.myspace.add(data)) {
-          this.toast.success(`"${m.title}" added to myspace`);
           document.dispatchEvent(new CustomEvent('myspaceUpdated'));
           this.close();
         }
@@ -334,7 +348,6 @@ class MovieModal {
       remBtn.addEventListener('click', () => {
         this.myspace.remove(m.id);
         document.dispatchEvent(new CustomEvent('myspaceUpdated'));
-        this.toast.remove(`"${m.title}" removed from myspace`);
         this.close();
       });
     }
@@ -354,7 +367,6 @@ class MovieModal {
     this.backdrop.querySelector('.cw-modal-content').innerHTML = `
       <button class="cw-modal-close">✕</button>
       <div class="state-container" style="min-height:300px">
-        <div class="state-icon">⚠️</div>
         <div class="state-title">Couldn't Load</div>
         <p class="state-sub">Failed to fetch movie details. Please try again.</p>
       </div>`;
@@ -425,38 +437,14 @@ class MyspaceManager {
 }
 
 // ============================================================
-//  CLASS: ToastManager
-// ============================================================
-class ToastManager {
-  constructor() {
-    this.container = document.getElementById('toast-container');
-  }
-
-  show(message, type = 'info', icon = 'ℹ️') {
-    if (!this.container) return;
-    const toast = document.createElement('div');
-    toast.className = `toast ${type}`;
-    toast.innerHTML = `<span>${icon}</span> ${message}`;
-    this.container.appendChild(toast);
-    setTimeout(() => toast.remove(), 3000);
-  }
-
-  success(msg) { this.show(msg, 'success', '✅'); }
-  info(msg)    { this.show(msg, 'info',    '🎬'); }
-  remove(msg)  { this.show(msg, 'remove',  '🗑️'); }
-}
-
-// ============================================================
 //  SHARED INIT
 // ============================================================
 let modal;
 let myspace;
-let toast;
 
 document.addEventListener('DOMContentLoaded', () => {
   myspace = new MyspaceManager();
-  toast   = new ToastManager();
-  modal   = new MovieModal(myspace, toast);
+  modal   = new MovieModal(myspace);
   new NavController();
   new ScrollAnimator();
   document.dispatchEvent(new CustomEvent('appReady'));

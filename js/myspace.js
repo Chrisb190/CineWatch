@@ -120,7 +120,7 @@ class RatingModal {
         <textarea id="review-text" class="review-textarea" placeholder="What did you think? Write your thoughts…" rows="4">${currentText}</textarea>
         <div style="display:flex;gap:0.75rem;margin-top:1.25rem">
           <button class="btn btn-primary" id="rate-save" style="flex:1">Save</button>
-          ${current ? `<button class="btn btn-ghost" id="rate-clear">Clear</button>` : ''}
+          ${current ? `<button class="btn btn-ghost" id="rate-clear">Delete</button>` : ''}
         </div>
       </div>`;
 
@@ -170,7 +170,6 @@ class RatingModal {
     });
       this.onRate(movie.id, selected);
       document.dispatchEvent(new CustomEvent('reviewsUpdated'));
-      toast.success(`Review saved for "${movie.Title}"`);
       this.close();
     });
 
@@ -199,11 +198,10 @@ class RatingModal {
 //  CLASS: MyspaceCardRenderer
 // ============================================================
 class MyspaceCardRenderer {
-  constructor(myspaceMgr, reviewMgr, ratingModal, toastMgr, onUpdate) {
+  constructor(myspaceMgr, reviewMgr, ratingModal, onUpdate) {
     this.myspace   = myspaceMgr;
     this.reviews     = reviewMgr;
     this.ratingModal = ratingModal;
-    this.toast       = toastMgr;
     this.onUpdate    = onUpdate;
   }
 
@@ -309,12 +307,10 @@ class MyspaceCardRenderer {
     if (movie.watched) {
       // In Watched tab — remove entirely
       myspace.remove(movie.id);
-      this.toast.remove(`"${movie.Title || movie.title || ''}" removed`);
     } else {
       // In Watchlist tab — move to Watched
       myspace.toggleWatched(movie.id);
       movie.watched = true;
-      this.toast.info(`"${movie.Title || movie.title || ''}" moved to Watched`);
     }
     this.onUpdate();
   });
@@ -326,7 +322,6 @@ class MyspaceCardRenderer {
       heartBtn.classList.toggle('active', movie.liked);
       heartBtn.querySelector('svg').setAttribute('fill', movie.liked ? 'currentColor' : 'none');
       heartBtn.title = movie.liked ? 'Remove from likes' : 'Like this film';
-      this.toast.success(movie.liked ? `"${title}" added to likes` : `"${title}" removed from likes`);
       this.onUpdate();
     });
 
@@ -351,18 +346,18 @@ class MyspaceCardRenderer {
     detBtn.addEventListener('click', e => {
       e.stopPropagation();
       drop.classList.remove('open');
-      modal?.open(movie.id);
+      modal?.open(movie.id,true);
     });
 
     // Remove
     remBtn.addEventListener('click', e => {
-      e.stopPropagation();
-      drop.classList.remove('open');
-      myspace.remove(movie.id);
-      this.reviews.remove(movie.id);
-      this.toast.remove(`"${title}" removed`);
-      this.onUpdate();
-    });
+  e.stopPropagation();
+  drop.classList.remove('open');
+  myspace.remove(movie.id);
+  this.reviews.remove(movie.id);
+  document.dispatchEvent(new CustomEvent('reviewsUpdated'));
+  this.onUpdate();
+});
   }
 }
 
@@ -400,7 +395,7 @@ class MyspaceController {
 
     this.wlRenderer = new MyspaceCardRenderer(
       myspace, this.reviews,
-      this.ratingModal, toast,
+      this.ratingModal,
       () => { this._render(); this._updateStats(); }
     );
   }

@@ -114,7 +114,6 @@ if (yearVal === '2026') {
   yearFrom = '1960'; yearTo = '1969';
 } else if (yearVal === '1950s') {
   yearFrom = '1950'; yearTo = '1959';
-} else if (yearVal === 'classic') {
 }      let data;
 
       if (this.searchQuery) {
@@ -154,7 +153,6 @@ if (yearVal === '2026') {
     if (!movies || movies.length === 0) {
       this.grid.innerHTML = `
         <div class="state-container" style="grid-column:1/-1">
-          <div class="state-icon">🔍</div>
           <div class="state-title">No Results</div>
           <p class="state-sub">Try a different search term or genre.</p>
         </div>`;
@@ -210,7 +208,6 @@ if (yearVal === '2026') {
   _renderError() {
     this.grid.innerHTML = `
       <div class="state-container" style="grid-column:1/-1">
-        <div class="state-icon">⚠️</div>
         <div class="state-title">Failed to Load</div>
         <p class="state-sub">Could not connect to TMDb. Check your connection.</p>
       </div>`;
